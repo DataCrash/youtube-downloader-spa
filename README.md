@@ -24,9 +24,11 @@ Depois, abra `https://youtube.download`. O endereço
 `http://youtube.download` também funciona e é redirecionado automaticamente
 para HTTPS.
 
-Os arquivos ficam em `./downloads`; a pasta informada na interface é uma
-subpasta desse diretório. Por segurança, caminhos absolutos e travessia com
-`..` são recusados.
+Os arquivos ficam em `C:\\Users\\<seu-usuário>\\Videos`, diretamente no
+Windows. A interface começa nessa pasta, restaura o último destino usado e
+cria subpastas inexistentes ao iniciar o download. Caminhos absolutos são
+aceitos somente dentro da pasta `Vídeos`; isso impede que o container grave em
+outras áreas do computador.
 
 ## Operação diária
 
@@ -72,14 +74,18 @@ O Vite encaminha `/api` para `http://localhost:3000`.
 
 A resposta permanece aberta como `text/event-stream`, emitindo eventos
 `started`, `progress`, `complete` ou `error`. Somente URLs HTTPS do YouTube são
-aceitas. `outputPath` é opcional e relativo a `/downloads`; `filename` também é
-opcional e é sanitizado antes de chegar ao `yt-dlp`.
+aceitas. `outputPath` é opcional e pode ser uma subpasta ou um caminho absoluto
+dentro de `C:\\Users\\<seu-usuário>\\Videos`; `filename` também é opcional e é
+sanitizado antes de chegar ao `yt-dlp`.
 
 ## Observações do navegador
 
 - O tema e a última pasta usada ficam somente em `localStorage`.
-- O seletor `webkitdirectory` não revela o caminho absoluto local; a interface
-  aproveita o nome da pasta como subdiretório do volume `downloads`.
+- O botão **Procurar** usa o seletor nativo de diretórios do navegador, não um
+  campo de upload. Como o navegador não expõe o caminho absoluto selecionado,
+  ele usa o nome da pasta como subpasta de `Vídeos`.
+- O título é consultado no `yt-dlp` e sugerido como nome do arquivo; ele pode
+  ser alterado antes de iniciar o download.
 - A leitura automática da área de transferência depende da permissão do
   navegador e de um contexto considerado seguro. Colar manualmente sempre
   funciona.

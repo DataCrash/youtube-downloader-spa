@@ -31,6 +31,12 @@ type ServerEvent = {
   eta?: string
 }
 
+type AppConfig = { downloadPath: string }
+type VideoMetadata = { title: string }
+type DirectoryPickerWindow = Window & {
+  showDirectoryPicker?: (options?: { mode?: 'read' }) => Promise<{ name: string }>
+}
+
 const themeKey = 'youtube-downloader-theme'
 const downloadPathKey = 'youtube-downloader-last-path'
 
@@ -71,9 +77,10 @@ function App() {
   const [url, setUrl] = useState('')
   const [filename, setFilename] = useState('')
   const [outputPath, setOutputPath] = useState(() => localStorage.getItem(downloadPathKey) || '')
+  const [videosPath, setVideosPath] = useState('')
+  const [destinationHint, setDestinationHint] = useState('')
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem(themeKey) as Theme | null) || 'system')
   const [downloads, setDownloads] = useState<DownloadTask[]>([])
-  const folderInputRef = useRef<HTMLInputElement>(null)
   const lastClipboardRef = useRef('')
 
   const hasActiveDownloads = downloads.some((item) => item.status === 'queued' || item.status === 'downloading')
@@ -90,6 +97,40 @@ function App() {
   useEffect(() => {
     localStorage.setItem(downloadPathKey, outputPath)
   }, [outputPath])
+
+  useEffect(() => {
+    void fetch('/api/config')
+      .then(async (response) => {
+        if (!response.ok) throw new Error()
+        return response.json() as Promise<AppConfig>
+      })
+      .then((config) => {
+        setVideosPath(config.downloadPath)
+        if (!localStorage.getItem(downloadPathKey) && config.downloadPath) setOutputPath(config.downloadPath)
+      })
+      .catch(() => setDestinationHint('Não foi possível identificar a pasta Vídeos do sistema.'))
+  }, [])
+
+  useEffect(() => {
+    const videoUrl = url.trim()
+    if (!videoUrl || filename.trim()) return
+
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      void fetch(`/api/metadata?url=${encodeURIComponent(videoUrl)}`, { signal: controller.signal })
+        .then(async (response) => {
+          if (!response.ok) throw new Error()
+          return response.json() as Promise<VideoMetadata>
+        })
+        .then((metadata) => setFilename((current) => current || metadata.title))
+        .catch(() => undefined)
+    }, 500)
+
+    return () => {
+      controller.abort()
+      window.clearTimeout(timer)
+    }
+  }, [url, filename])
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -173,11 +214,26 @@ function App() {
     }
   }
 
-  const chooseFolder = (files: FileList | null) => {
-    const first = files?.item(0)
-    const relativePath = first?.webkitRelativePath
-    const folder = relativePath?.split('/')[0]
-    if (folder) setOutputPath(folder)
+  const chooseFolder = async () => {
+    const picker = window as DirectoryPickerWindow
+    if (!picker.showDirectoryPicker) {
+      setDestinationHint('Seu navegador não oferece o seletor de pastas. Digite uma subpasta dentro de Vídeos.')
+      return
+    }
+
+    try {
+      const directory = await picker.showDirectoryPicker({ mode: 'read' })
+      if (!videosPath) {
+        setDestinationHint('A pasta Vídeos ainda está sendo identificada. Tente novamente em instantes.')
+        return
+      }
+      setOutputPath(`${videosPath}\\${directory.name}`)
+      setDestinationHint('A subpasta será criada dentro de Vídeos, caso ainda não exista.')
+    } catch (error) {
+      if (error instanceof DOMException && error.name !== 'AbortError') {
+        setDestinationHint('Não foi possível selecionar a pasta.')
+      }
+    }
   }
 
   const cycleTheme = () => setTheme((current) => (current === 'system' ? 'light' : current === 'light' ? 'dark' : 'system'))
@@ -211,26 +267,18 @@ function App() {
                 <Input id="url" type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://www.youtube.com/watch?v=…" required />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="filename">Nome do arquivo (opcional)</Label>
-                <Input id="filename" value={filename} onChange={(event) => setFilename(event.target.value)} placeholder="meu-video" />
+                <Label htmlFor="filename">Nome do arquivo</Label>
+                <Input id="filename" value={filename} onChange={(event) => setFilename(event.target.value)} placeholder="O título do vídeo será sugerido" />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="outputPath">Pasta de destino (opcional)</Label>
+                <Label htmlFor="outputPath">Pasta de destino</Label>
                 <div className="flex gap-2">
-                  <Input id="outputPath" value={outputPath} onChange={(event) => setOutputPath(event.target.value)} placeholder="subpasta em downloads" />
-                  <Button type="button" variant="outline" onClick={() => folderInputRef.current?.click()}>
+                  <Input id="outputPath" value={outputPath} onChange={(event) => setOutputPath(event.target.value)} placeholder="C:\\Users\\você\\Videos" />
+                  <Button type="button" variant="outline" onClick={() => void chooseFolder()}>
                     <FolderOpen className="h-4 w-4" /> Procurar
                   </Button>
-                  <input
-                    ref={folderInputRef}
-                    type="file"
-                    className="hidden"
-                    multiple
-                    onChange={(event) => chooseFolder(event.target.files)}
-                    {...({ webkitdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
-                  />
                 </div>
-                <p className="text-xs text-muted-foreground">O navegador fornece somente o nome da pasta; ela é criada dentro do volume local <code>downloads</code>.</p>
+                <p className="text-xs text-muted-foreground">Use a pasta Vídeos ou uma subpasta. Se ela não existir, será criada antes do download. {destinationHint}</p>
               </div>
               <Button type="submit" className="w-full sm:w-fit">Iniciar download</Button>
             </form>

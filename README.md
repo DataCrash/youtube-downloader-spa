@@ -12,9 +12,16 @@ Express executa o binário oficial `yt-dlp` sem passar argumentos por shell.
 docker compose up --build -d
 ```
 
-Acesse `http://YouTube.DataCrash.Download` ou `http://localhost`. Os arquivos
-ficam em `./downloads`; a pasta informada na interface é uma subpasta desse
-diretório. Por segurança, caminhos absolutos e travessia com `..` são recusados.
+Acesse `http://youtube.download`. Para que este endereço aponte apenas para o
+serviço local, execute uma vez no PowerShell aberto como Administrador:
+
+```powershell
+Add-Content -LiteralPath 'C:\Windows\System32\drivers\etc\hosts' -Value "`n127.0.0.1 youtube.download"
+```
+
+Os arquivos ficam em `./downloads`; a pasta informada na interface é uma
+subpasta desse diretório. Por segurança, caminhos absolutos e travessia com
+`..` são recusados.
 
 ```powershell
 docker compose logs -f

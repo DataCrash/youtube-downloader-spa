@@ -24,11 +24,29 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    ports:
-      - "80:80"
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 5s
+
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

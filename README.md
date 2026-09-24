@@ -6,22 +6,35 @@ Express executa o binário oficial `yt-dlp` sem passar argumentos por shell.
 
 > Baixe somente conteúdo que você tem autorização para acessar e copiar.
 
-## Executar com Docker
+## Primeiro uso no Windows
+
+Abra o PowerShell na pasta do projeto e execute:
 
 ```powershell
-docker compose up --build -d
+powershell -ExecutionPolicy Bypass -File .\start.ps1
 ```
 
-Acesse `http://youtube.download`. Para que este endereço aponte apenas para o
-serviço local, execute uma vez no PowerShell aberto como Administrador:
+O Windows pedirá autorização de administrador uma única vez. O script:
 
-```powershell
-Add-Content -LiteralPath 'C:\Windows\System32\drivers\etc\hosts' -Value "`n127.0.0.1 youtube.download"
-```
+- associa `youtube.download` ao computador local;
+- cria e inicia os containers;
+- instala uma autoridade certificadora local, válida somente nesta máquina.
+
+Depois, abra `https://youtube.download`. O endereço
+`http://youtube.download` também funciona e é redirecionado automaticamente
+para HTTPS.
 
 Os arquivos ficam em `./downloads`; a pasta informada na interface é uma
 subpasta desse diretório. Por segurança, caminhos absolutos e travessia com
 `..` são recusados.
+
+## Operação diária
+
+Depois do primeiro uso, para iniciar novamente:
+
+```powershell
+docker compose up -d
+```
 
 ```powershell
 docker compose logs -f

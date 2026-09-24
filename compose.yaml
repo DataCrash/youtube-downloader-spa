@@ -7,8 +7,11 @@ services:
     environment:
       PORT: "3000"
       DOWNLOAD_ROOT: /downloads
+      HOST_DOWNLOAD_ROOT: ${USERPROFILE}/Videos
     volumes:
-      - ./downloads:/downloads
+      - type: bind
+        source: ${USERPROFILE}/Videos
+        target: /downloads
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s

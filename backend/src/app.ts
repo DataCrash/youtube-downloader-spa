@@ -1,7 +1,7 @@
 import express from 'express'
 
-import { runDownload, type DownloadEvent } from './download.js'
-import { downloadRequestSchema } from './validation.js'
+import { getVideoTitle, runDownload, type DownloadEvent } from './download.js'
+import { assertYouTubeUrl, downloadRequestSchema } from './validation.js'
 
 export function createApp() {
   const app = express()
@@ -10,6 +10,20 @@ export function createApp() {
 
   app.get('/api/health', (_request, response) => {
     response.json({ status: 'ok' })
+  })
+
+  app.get('/api/config', (_request, response) => {
+    response.json({ downloadPath: process.env.HOST_DOWNLOAD_ROOT || '' })
+  })
+
+  app.get('/api/metadata', async (request, response) => {
+    const url = typeof request.query.url === 'string' ? request.query.url : ''
+    try {
+      assertYouTubeUrl(url)
+      response.json({ title: await getVideoTitle(url) })
+    } catch (error) {
+      response.status(400).json({ error: error instanceof Error ? error.message : 'Não foi possível obter os metadados.' })
+    }
   })
 
   app.post('/api/download', async (request, response) => {
@@ -44,7 +58,12 @@ export function createApp() {
     }, 15_000)
 
     try {
-      await runDownload(parsed.data, process.env.DOWNLOAD_ROOT || '/downloads', send)
+      await runDownload(
+        parsed.data,
+        process.env.DOWNLOAD_ROOT || '/downloads',
+        process.env.HOST_DOWNLOAD_ROOT || '',
+        send,
+      )
     } catch (error) {
       send({ type: 'error', message: error instanceof Error ? error.message : 'Falha desconhecida.' })
     } finally {

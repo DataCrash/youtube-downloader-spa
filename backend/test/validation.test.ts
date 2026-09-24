@@ -13,9 +13,11 @@ test('aceita somente URLs HTTPS do YouTube', () => {
 
 test('mantém o destino dentro da raiz de downloads', () => {
   const root = path.resolve('downloads')
-  assert.equal(resolveOutputDirectory(root, 'music'), path.join(root, 'music'))
-  assert.throws(() => resolveOutputDirectory(root, '..'))
-  assert.throws(() => resolveOutputDirectory(root, path.resolve('outside')))
+  const hostRoot = 'C:\\Users\\DataCrash\\Videos'
+  assert.equal(resolveOutputDirectory(root, hostRoot, 'music'), path.join(root, 'music'))
+  assert.equal(resolveOutputDirectory(root, hostRoot, 'C:\\Users\\DataCrash\\Videos\\FullCycle'), path.join(root, 'FullCycle'))
+  assert.throws(() => resolveOutputDirectory(root, hostRoot, '..'))
+  assert.throws(() => resolveOutputDirectory(root, hostRoot, 'C:\\outside'))
 })
 
 test('sanitiza nomes e interpreta progresso', () => {

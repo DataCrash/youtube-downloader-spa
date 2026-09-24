@@ -1,7 +1,7 @@
 FROM node:20-bookworm-slim
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg \
+  && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg python3 \
   && curl -fL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
   && chmod 0755 /usr/local/bin/yt-dlp \
   && rm -rf /var/lib/apt/lists/*

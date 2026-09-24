@@ -34,13 +34,36 @@ export function parseYtDlpLine(line: string): DownloadEvent | undefined {
   return undefined
 }
 
+export async function getVideoTitle(value: string): Promise<string> {
+  const url = assertYouTubeUrl(value)
+
+  return new Promise<string>((resolve, reject) => {
+    const child = spawn('yt-dlp', ['--no-playlist', '--skip-download', '--print', '%(title)s', url.toString()], { shell: false, windowsHide: true })
+    let stdout = ''
+    let stderr = ''
+
+    child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf8') })
+    child.stderr.on('data', (chunk: Buffer) => { stderr = `${stderr}${chunk.toString('utf8')}`.slice(-2000) })
+    child.once('error', reject)
+    child.once('close', (code) => {
+      const title = stdout.trim()
+      if (code === 0 && title) {
+        resolve(title)
+        return
+      }
+      reject(new Error(stderr.trim() || 'Não foi possível obter o título do vídeo.'))
+    })
+  })
+}
+
 export async function runDownload(
   request: DownloadRequest,
   downloadRoot: string,
+  hostDownloadRoot: string,
   emit: (event: DownloadEvent) => void,
 ): Promise<void> {
   const url = assertYouTubeUrl(request.url)
-  const outputDirectory = resolveOutputDirectory(downloadRoot, request.outputPath)
+  const outputDirectory = resolveOutputDirectory(downloadRoot, hostDownloadRoot, request.outputPath)
   const filename = sanitizeFilename(request.filename)
   await mkdir(outputDirectory, { recursive: true })
 

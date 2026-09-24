@@ -36,15 +36,28 @@ export function sanitizeFilename(value?: string): string | undefined {
   return sanitized.slice(0, 100) || undefined
 }
 
-export function resolveOutputDirectory(root: string, requested?: string): string {
+export function resolveOutputDirectory(root: string, hostRoot: string, requested?: string): string {
   const rootPath = path.resolve(root)
-  const relative = requested?.trim() || ''
-  if (path.isAbsolute(relative)) {
-    throw new Error('A pasta de destino deve ser relativa ao diretório de downloads.')
+  const requestedPath = requested?.trim() || ''
+  if (!requestedPath) return rootPath
+
+  if (path.win32.isAbsolute(requestedPath)) {
+    const hostBase = path.win32.resolve(hostRoot)
+    const hostTarget = path.win32.resolve(requestedPath)
+    const relative = path.win32.relative(hostBase, hostTarget)
+    if (relative === '' || (!relative.startsWith('..\\') && relative !== '..' && !path.win32.isAbsolute(relative))) {
+      return path.resolve(rootPath, ...relative.split('\\').filter(Boolean))
+    }
+    throw new Error('A pasta de destino deve estar dentro da sua pasta Vídeos.')
   }
-  const resolved = path.resolve(rootPath, relative)
+
+  if (path.posix.isAbsolute(requestedPath)) {
+    throw new Error('A pasta de destino deve estar dentro da sua pasta Vídeos.')
+  }
+
+  const resolved = path.resolve(rootPath, requestedPath)
   if (resolved !== rootPath && !resolved.startsWith(`${rootPath}${path.sep}`)) {
-    throw new Error('A pasta de destino está fora do diretório permitido.')
+    throw new Error('A pasta de destino deve estar dentro da sua pasta Vídeos.')
   }
   return resolved
 }

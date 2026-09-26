@@ -110,6 +110,7 @@ function App() {
   const [downloads, setDownloads] = useState<DownloadTask[]>([])
   const [history, setHistory] = useState<DownloadTask[]>(loadHistory)
   const lastClipboardRef = useRef('')
+  const sceneRef = useRef<HTMLElement>(null)
 
   const hasActiveDownloads = downloads.some((item) => item.status === 'queued' || item.status === 'downloading')
   const downloadCards = [...downloads, ...history]
@@ -299,10 +300,22 @@ function App() {
   const cycleTheme = () => setTheme((current) => (current === 'system' ? 'light' : current === 'light' ? 'dark' : 'system'))
   const ThemeIcon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor
   const isCyberpunk = progressEngine === 'cyberpunk'
+  const updateParallax = (clientX: number, clientY: number) => {
+    const scene = sceneRef.current
+    if (!scene) return
+    const bounds = scene.getBoundingClientRect()
+    const x = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width))
+    const y = Math.max(0, Math.min(1, (clientY - bounds.top) / bounds.height))
+    scene.style.setProperty('--parallax-x', `${(x - .5) * 18}px`)
+    scene.style.setProperty('--parallax-y', `${(y - .5) * 14}px`)
+    scene.style.setProperty('--glare-x', `${x * 100}%`)
+    scene.style.setProperty('--glare-y', `${y * 100}%`)
+  }
 
   return (
-    <main className="chrono-shell h-dvh overflow-hidden p-3 sm:p-5">
+    <main ref={sceneRef} onPointerMove={(event) => updateParallax(event.clientX, event.clientY)} onPointerLeave={() => { sceneRef.current?.style.setProperty('--parallax-x', '0px'); sceneRef.current?.style.setProperty('--parallax-y', '0px') }} className="chrono-shell h-dvh overflow-hidden p-3 sm:p-5">
       <div className="ambient-scene" aria-hidden="true"><i className="crystal crystal-a" /><i className="crystal crystal-b" /><i className="crystal crystal-c" /><i className="aurora aurora-a" /><i className="aurora aurora-b" /></div>
+      <div className="scene-image" aria-hidden="true" />
       <svg className="hidden" aria-hidden="true"><defs><filter id="liquid-magnetic-goo"><feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" /><feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" /><feBlend in="SourceGraphic" in2="goo" /></filter></defs></svg>
       <div className="mx-auto grid h-full max-w-7xl grid-rows-[auto_minmax(0,1fr)] gap-3 sm:gap-4">
         <header className="app-topbar relative z-20 flex flex-wrap items-center justify-between gap-3 px-1 py-2 sm:px-2">

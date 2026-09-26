@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { CheckCircle2, ExternalLink, FolderOpen, LoaderCircle, Monitor, Moon, Sun, Youtube } from 'lucide-react'
+import { CheckCircle2, ExternalLink, FolderOpen, LoaderCircle, Monitor, Moon, RotateCcw, ShieldAlert, ShieldCheck, Sun, Trash2, Youtube } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,25 +22,29 @@ type DownloadTask = {
   eta?: string
   error?: string
   filePath?: string
+  verification?: DownloadVerification
 }
 
 type ServerEvent = {
-  type: 'started' | 'progress' | 'complete' | 'error'
+  type: 'started' | 'progress' | 'verifying' | 'complete' | 'error'
   message?: string
   percent?: number
   speed?: string
   eta?: string
   filePath?: string
+  verification?: DownloadVerification
 }
 
 type AppConfig = { downloadPath: string }
 type VideoMetadata = { title: string }
+type DownloadVerification = { status: 'verified' | 'warning'; message: string }
 type DirectoryPickerWindow = Window & {
   showDirectoryPicker?: (options?: { mode?: 'read' }) => Promise<{ name: string }>
 }
 
 const themeKey = 'youtube-downloader-theme'
 const downloadPathKey = 'youtube-downloader-last-path'
+const historyKey = 'youtube-downloader-history'
 
 function normalizeWindowsPath(value: string) {
   return value.replaceAll('/', '\\').replace(/\\+$/, '')
@@ -48,6 +52,16 @@ function normalizeWindowsPath(value: string) {
 
 function revealFileUrl(filePath: string) {
   return `youtube-downloader://reveal/${encodeURIComponent(filePath)}`
+}
+
+function loadHistory(): DownloadTask[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(historyKey) || '[]') as unknown
+    if (!Array.isArray(saved)) return []
+    return saved.filter((item): item is DownloadTask => Boolean(item && typeof item === 'object' && (item as DownloadTask).status === 'complete'))
+  } catch {
+    return []
+  }
 }
 
 function applyTheme(theme: Theme) {
@@ -91,6 +105,7 @@ function App() {
   const [destinationHint, setDestinationHint] = useState('')
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem(themeKey) as Theme | null) || 'system')
   const [downloads, setDownloads] = useState<DownloadTask[]>([])
+  const [history, setHistory] = useState<DownloadTask[]>(loadHistory)
   const lastClipboardRef = useRef('')
 
   const hasActiveDownloads = downloads.some((item) => item.status === 'queued' || item.status === 'downloading')
@@ -107,6 +122,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(downloadPathKey, outputPath)
   }, [outputPath])
+
+  useEffect(() => {
+    localStorage.setItem(historyKey, JSON.stringify(history))
+  }, [history])
 
   useEffect(() => {
     void fetch('/api/config')
@@ -175,24 +194,20 @@ function App() {
     setDownloads((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)))
   }
 
-  const startDownload = async (event: FormEvent) => {
-    event.preventDefault()
-    const requestUrl = url.trim()
+  const queueDownload = async (requestUrl: string, requestedFilename?: string, requestedOutputPath?: string) => {
     if (!requestUrl) return
 
     const id = crypto.randomUUID()
     const task: DownloadTask = {
       id,
       url: requestUrl,
-      filename: filename.trim() || undefined,
-      outputPath: outputPath.trim() || undefined,
+      filename: requestedFilename?.trim() || undefined,
+      outputPath: requestedOutputPath?.trim() || undefined,
       progress: 0,
       status: 'queued',
       message: 'Aguardando o backend…',
     }
     setDownloads((current) => [task, ...current])
-    setUrl('')
-    setFilename('')
 
     try {
       const response = await fetch('/api/download', {
@@ -203,6 +218,8 @@ function App() {
       await consumeEventStream(response, (serverEvent) => {
         if (serverEvent.type === 'started') {
           updateTask(id, { status: 'downloading', message: serverEvent.message || 'Download iniciado.' })
+        } else if (serverEvent.type === 'verifying') {
+          updateTask(id, { status: 'downloading', progress: 100, message: serverEvent.message || 'Verificando arquivo…' })
         } else if (serverEvent.type === 'progress') {
           updateTask(id, {
             status: 'downloading',
@@ -212,12 +229,16 @@ function App() {
             message: 'Baixando vídeo…',
           })
         } else if (serverEvent.type === 'complete') {
-          updateTask(id, {
+          const completedTask: DownloadTask = {
+            ...task,
             status: 'complete',
             progress: 100,
             filePath: serverEvent.filePath,
+            verification: serverEvent.verification,
             message: serverEvent.message || 'Download concluído.',
-          })
+          }
+          updateTask(id, completedTask)
+          setHistory((current) => [completedTask, ...current])
         } else {
           updateTask(id, { status: 'error', error: serverEvent.message || 'Falha no download.', message: 'Download interrompido.' })
         }
@@ -229,6 +250,20 @@ function App() {
         message: 'Download interrompido.',
       })
     }
+  }
+
+  const startDownload = async (event: FormEvent) => {
+    event.preventDefault()
+    const requestUrl = url.trim()
+    const requestedFilename = filename.trim()
+    const requestedOutputPath = outputPath.trim()
+    setUrl('')
+    setFilename('')
+    await queueDownload(requestUrl, requestedFilename, requestedOutputPath)
+  }
+
+  const retryDownload = (item: DownloadTask) => {
+    void queueDownload(item.url, item.filename, item.outputPath)
   }
 
   const chooseFolder = async () => {
@@ -334,6 +369,51 @@ function App() {
             </Card>
           ))}
         </section>
+
+        {history.length > 0 ? (
+          <Card>
+            <CardHeader className="flex-row items-center justify-between gap-4 space-y-0">
+              <div>
+                <CardTitle>Histórico de downloads</CardTitle>
+                <CardDescription>Remover itens daqui não apaga os arquivos salvos.</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setHistory([])}>
+                <Trash2 className="h-4 w-4" /> Limpar histórico
+              </Button>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              {history.map((item) => (
+                <div key={item.id} className="grid gap-2 rounded-lg border p-4">
+                  <p className="truncate font-medium">{item.filename || 'Nome automático do YouTube'}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                    <a className="inline-flex items-center gap-1 text-primary hover:underline" href={item.url} target="_blank" rel="noreferrer">
+                      Abrir no YouTube <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                    {item.filePath ? (
+                      <a className="inline-flex items-center gap-1 text-primary hover:underline" href={revealFileUrl(item.filePath)}>
+                        Mostrar arquivo <FolderOpen className="h-3.5 w-3.5" />
+                      </a>
+                    ) : null}
+                  </div>
+                  {item.verification ? (
+                    <p className={`flex items-center gap-2 text-xs ${item.verification.status === 'verified' ? 'text-green-600' : 'text-amber-600'}`}>
+                      {item.verification.status === 'verified' ? <ShieldCheck className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
+                      {item.verification.message}
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button variant="outline" size="sm" onClick={() => retryDownload(item)}>
+                      <RotateCcw className="h-4 w-4" /> Baixar novamente
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setHistory((current) => current.filter((entry) => entry.id !== item.id))}>
+                      <Trash2 className="h-4 w-4" /> Remover do histórico
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     </main>
   )

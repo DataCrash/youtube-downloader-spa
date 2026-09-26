@@ -5,40 +5,44 @@
 :root {
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   color-scheme: light;
-  --background: oklch(0.985 0.005 250);
-  --foreground: oklch(0.18 0.025 255);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.025 255);
-  --primary: oklch(0.57 0.23 28);
+  --background: #f3f5f9;
+  --foreground: #0f172a;
+  --card: rgba(255, 255, 255, 0.65);
+  --card-foreground: #0f172a;
+  --primary: #991b1b;
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.94 0.012 250);
-  --secondary-foreground: oklch(0.25 0.03 255);
-  --muted: oklch(0.95 0.01 250);
-  --muted-foreground: oklch(0.49 0.025 255);
-  --accent: oklch(0.93 0.03 28);
-  --accent-foreground: oklch(0.28 0.08 28);
-  --border: oklch(0.89 0.014 250);
-  --input: oklch(0.89 0.014 250);
-  --ring: oklch(0.57 0.23 28);
+  --secondary: #e9eef7;
+  --secondary-foreground: #172033;
+  --muted: #edf1f7;
+  --muted-foreground: #475569;
+  --accent: #e1edf9;
+  --accent-foreground: #172033;
+  --border: rgba(15, 23, 42, 0.1);
+  --input: rgba(255, 255, 255, 0.78);
+  --ring: #3b82f6;
+  --accent-primary: #3b82f6;
+  --accent-fluid-end: #1d4ed8;
 }
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.15 0.02 255);
-  --foreground: oklch(0.95 0.01 250);
-  --card: oklch(0.20 0.025 255);
-  --card-foreground: oklch(0.95 0.01 250);
-  --primary: oklch(0.66 0.22 28);
+  --background: #0b0f19;
+  --foreground: #ffffff;
+  --card: rgba(20, 28, 47, 0.45);
+  --card-foreground: #ffffff;
+  --primary: #e11d48;
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.27 0.025 255);
-  --secondary-foreground: oklch(0.95 0.01 250);
-  --muted: oklch(0.25 0.02 255);
-  --muted-foreground: oklch(0.70 0.02 250);
-  --accent: oklch(0.30 0.08 28);
-  --accent-foreground: oklch(0.95 0.02 28);
-  --border: oklch(0.31 0.025 255);
-  --input: oklch(0.31 0.025 255);
-  --ring: oklch(0.66 0.22 28);
+  --secondary: rgba(45, 57, 86, 0.62);
+  --secondary-foreground: #ffffff;
+  --muted: rgba(33, 44, 68, 0.7);
+  --muted-foreground: #94a3b8;
+  --accent: rgba(0, 242, 254, 0.11);
+  --accent-foreground: #ffffff;
+  --border: rgba(148, 163, 184, 0.18);
+  --input: rgba(8, 14, 26, 0.65);
+  --ring: #00f2fe;
+  --accent-primary: #00f2fe;
+  --accent-fluid-end: #9b51e0;
 }
 
 @theme inline {
@@ -62,3 +66,52 @@
 * { border-color: var(--border); }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--background); color: var(--foreground); }
 button, input { font: inherit; }
+
+.chrono-shell {
+  background:
+    radial-gradient(circle at 8% 2%, color-mix(in srgb, var(--accent-primary) 18%, transparent), transparent 28rem),
+    radial-gradient(circle at 92% 98%, color-mix(in srgb, var(--accent-fluid-end) 16%, transparent), transparent 32rem),
+    linear-gradient(135deg, var(--background), color-mix(in srgb, var(--background) 84%, #172554));
+}
+
+.chrono-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: .22;
+  background-image: linear-gradient(color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+.glass-panel {
+  border: 1px solid transparent !important;
+  background: linear-gradient(var(--card), var(--card)) padding-box, linear-gradient(135deg, color-mix(in srgb, white 45%, transparent), color-mix(in srgb, var(--accent-primary) 28%, transparent), transparent) border-box !important;
+  box-shadow: 0 18px 45px color-mix(in srgb, #020617 18%, transparent), inset 0 1px 0 color-mix(in srgb, white 20%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.brand-mark { display: grid; width: 2.4rem; height: 2.4rem; place-items: center; border-radius: .85rem; color: white; background: linear-gradient(135deg, #fb3a51, var(--primary)); box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 38%, transparent); }
+.eyebrow { color: var(--accent-primary); font-size: .7rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+.chrono-input { background: var(--input) !important; border-color: color-mix(in srgb, var(--border) 90%, var(--accent-primary)) !important; box-shadow: inset 0 1px 0 color-mix(in srgb, white 14%, transparent); }
+.chrono-input:focus { border-color: var(--accent-primary) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 18%, transparent) !important; }
+.chrono-primary { background: linear-gradient(100deg, var(--primary), color-mix(in srgb, var(--primary) 70%, #fb7185)) !important; box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 25%, transparent); }
+
+.preview-well { display: flex; align-items: center; gap: .75rem; border: 1px dashed color-mix(in srgb, var(--accent-primary) 48%, var(--border)); border-radius: .85rem; padding: .85rem; background: color-mix(in srgb, var(--accent-primary) 6%, transparent); }
+.preview-icon { display: grid; width: 2.2rem; height: 2.2rem; flex: 0 0 auto; place-items: center; border: 1px solid color-mix(in srgb, var(--accent-primary) 45%, transparent); border-radius: .7rem; color: var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 12%, transparent); }
+.engine-toggle { display: inline-flex; align-items: center; gap: .45rem; padding: .25rem .35rem .25rem .55rem; border: 1px solid var(--border); border-radius: 999px; color: var(--muted-foreground); font-size: .72rem; font-weight: 600; background: color-mix(in srgb, var(--background) 52%, transparent); }
+.engine-switch { display: inline-flex; width: 2rem; height: 1.1rem; align-items: center; padding: .12rem; border-radius: 999px; background: color-mix(in srgb, var(--muted-foreground) 30%, transparent); transition: background .2s ease; }
+.engine-switch span { width: .86rem; height: .86rem; border-radius: 999px; background: white; transform: translateX(0); transition: transform .2s ease; }
+.engine-switch.is-active { background: var(--accent-primary); }.engine-switch.is-active span { transform: translateX(.9rem); }
+.download-card { border: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent-primary)); border-radius: .9rem; padding: 1rem; background: color-mix(in srgb, var(--card) 76%, transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, white 10%, transparent); }
+.status-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .5rem; border: 1px solid var(--border); border-radius: 999px; color: var(--muted-foreground); font-size: .7rem; font-weight: 600; white-space: nowrap; background: color-mix(in srgb, var(--background) 40%, transparent); }
+.empty-feed { display: grid; min-height: 15rem; place-items: center; align-content: center; gap: .5rem; border: 1px dashed color-mix(in srgb, var(--accent-primary) 40%, var(--border)); border-radius: 1rem; text-align: center; background: color-mix(in srgb, var(--accent-primary) 4%, transparent); }
+.empty-orb { display: grid; width: 3.2rem; height: 3.2rem; place-items: center; border-radius: 1rem; color: var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 12%, transparent); box-shadow: 0 0 24px color-mix(in srgb, var(--accent-primary) 18%, transparent); }
+.liquid-track-container { display: none; position: relative; height: 8px; overflow: visible; border-radius: 999px; background: color-mix(in srgb, var(--muted-foreground) 16%, transparent); filter: url('#liquid-magnetic-goo'); }
+.liquid-core-stream { position: relative; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent-primary), var(--accent-fluid-end)); transition: width .2s cubic-bezier(.1,.8,.3,1); }
+.liquid-particle-node { position: absolute; top: 50%; right: -4px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent-fluid-end); transform: translateY(-50%); animation: magnetic-pulse 1.2s infinite alternate ease-in-out; }
+.mode-cyberpunk-fluid .mode-standard-bar { display: none; }.mode-cyberpunk-fluid .liquid-track-container { display: block; }
+@keyframes magnetic-pulse { from { scale: .72; opacity: .72; } to { scale: 1.18; opacity: 1; } }
+
+@media (max-width: 1023px) { .chrono-shell { overflow-y: auto; } .chrono-shell > div { min-height: 100%; height: auto; } }

@@ -188,7 +188,7 @@ A alternância entre o modo **Linear Estável (Standard)** e o modo **Fluido Mag
    function initializeProgressBarMode() {
      const savedMode = localStorage.getItem(TOGGLE_KEY) || 'standard';
      const isCyberpunk = (savedMode === 'cyberpunk');
-     
+
      uiToggleInput.checked = isCyberpunk;
      feedContainer.classList.toggle('mode-cyberpunk-fluid', isCyberpunk);
    }

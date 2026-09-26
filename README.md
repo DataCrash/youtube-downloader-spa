@@ -34,6 +34,12 @@ Ao concluir um download, use **Mostrar arquivo** para abrir o Explorador de
 Arquivos com o vídeo já selecionado. O `start.ps1` registra esse atalho local
 na primeira execução e só permite arquivos dentro de `Vídeos`.
 
+O histórico de downloads fica no `localStorage` do navegador. É possível
+remover um item, limpar o histórico inteiro ou baixar novamente sem afetar os
+arquivos no disco. Após cada download, o aplicativo valida localmente a
+existência de áudio e vídeo com `ffprobe` e compara duração e resolução com a
+seleção atual do YouTube.
+
 Os vídeos priorizam 1080p com H.264 e áudio AAC em MP4, formato reproduzido
 diretamente pelo Windows. Quando esse par não existe, o aplicativo escolhe a
 melhor opção disponível até 1080p, sempre com áudio.

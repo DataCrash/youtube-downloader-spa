@@ -1,65 +1,103 @@
 # YouTube Downloader SPA
 
-SPA local para iniciar downloads paralelos de vídeos do YouTube em até 1080p.
-O frontend React acompanha cada processo por Server-Sent Events; o backend
-Express executa o binário oficial `yt-dlp` sem passar argumentos por shell.
+Aplicação local para baixar vídeos autorizados do YouTube em até 1080p. A interface React acompanha o processo em tempo real; o backend Express executa `yt-dlp`, mescla áudio e vídeo com FFmpeg e grava diretamente na pasta **Vídeos** do Windows.
 
 > Baixe somente conteúdo que você tem autorização para acessar e copiar.
 
+## Recursos
+
+- Download paralelo, com progresso, velocidade e estimativa de tempo.
+- Prioridade para 1080p em H.264 + AAC dentro de MP4, formato compatível com o Windows; quando indisponível, usa a melhor alternativa com áudio até 1080p.
+- Sugestão automática do título como nome do arquivo.
+- Criação automática de subpastas em `C:\\Users\\<usuário>\\Videos`.
+- Histórico persistente no navegador, com remoção visual, limpeza e repetição de download sem apagar arquivos existentes.
+- Atalho **Mostrar arquivo**, que abre o Explorador de Arquivos com o vídeo selecionado.
+- Verificação automática de áudio, vídeo, duração e resolução depois do download.
+- Acesso local por `https://youtube.download`, com redirecionamento de HTTP para HTTPS.
+
 ## Primeiro uso no Windows
 
-Abra o PowerShell na pasta do projeto e execute:
+### Pré-requisitos
+
+- Windows 10 ou 11.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) em execução, com containers Linux habilitados.
+- PowerShell. A execução de `start.ps1` pede confirmação do Windows porque atualiza o arquivo `hosts` e instala um certificado local.
+
+No PowerShell, dentro da pasta do repositório, execute:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\start.ps1
 ```
 
-O Windows pedirá autorização de administrador uma única vez. O script:
+O script prepara a máquina e abre o navegador:
 
-- associa `youtube.download` ao computador local;
-- cria e inicia os containers;
-- instala uma autoridade certificadora local, válida somente nesta máquina.
+1. associa `youtube.download` ao computador local;
+2. registra o atalho local usado por **Mostrar arquivo**;
+3. cria ou atualiza os containers;
+4. instala a autoridade certificadora local do Caddy, válida somente nesta máquina;
+5. abre `https://youtube.download`.
 
-Depois, abra `https://youtube.download`. O endereço
-`http://youtube.download` também funciona e é redirecionado automaticamente
-para HTTPS.
+Depois disso, os dois endereços funcionam:
 
-Os arquivos ficam em `C:\\Users\\<seu-usuário>\\Videos`, diretamente no
-Windows. A interface começa nessa pasta, restaura o último destino usado e
-cria subpastas inexistentes ao iniciar o download. Caminhos absolutos são
-aceitos somente dentro da pasta `Vídeos`; isso impede que o container grave em
-outras áreas do computador.
+| Endereço | Comportamento |
+| --- | --- |
+| `https://youtube.download` | Aplicação segura principal. |
+| `http://youtube.download` | Redireciona automaticamente para HTTPS. |
 
-Ao concluir um download, use **Mostrar arquivo** para abrir o Explorador de
-Arquivos com o vídeo já selecionado. O `start.ps1` registra esse atalho local
-na primeira execução e só permite arquivos dentro de `Vídeos`.
+O certificado é local: ele não torna o endereço público nem envia dados para fora do seu computador.
 
-O histórico de downloads fica no `localStorage` do navegador. É possível
-remover um item, limpar o histórico inteiro ou baixar novamente sem afetar os
-arquivos no disco. Após cada download, o aplicativo valida localmente a
-existência de áudio e vídeo com `ffprobe` e compara duração e resolução com a
-seleção atual do YouTube.
+## Uso da aplicação
 
-Os vídeos priorizam 1080p com H.264 e áudio AAC em MP4, formato reproduzido
-diretamente pelo Windows. Quando esse par não existe, o aplicativo escolhe a
-melhor opção disponível até 1080p, sempre com áudio.
+1. Cole uma URL HTTPS do YouTube.
+2. Aguarde a sugestão do título ou informe um nome próprio.
+3. Escolha a pasta **Vídeos** ou uma subpasta. A última pasta usada é restaurada automaticamente; subpastas inexistentes são criadas no início do download.
+4. Inicie o download e acompanhe o progresso.
+5. Ao concluir, confira o resultado da validação e use **Mostrar arquivo** se quiser abrir o Explorer já com o arquivo selecionado.
 
-## Operação diária
+Por segurança, o aplicativo aceita destinos somente dentro de `C:\\Users\\<usuário>\\Videos`. O botão **Procurar** usa o seletor nativo do navegador, mas navegadores não revelam o caminho absoluto da pasta escolhida; por isso, o nome selecionado é usado como subpasta de `Vídeos`.
 
-Depois do primeiro uso, para iniciar novamente:
+### Histórico
+
+O histórico é salvo no `localStorage` do navegador para o endereço `youtube.download`. Ele registra downloads concluídos e preserva a URL, o nome, o destino, o caminho do arquivo e o resultado da validação.
+
+- **Remover do histórico** remove somente o registro visual.
+- **Limpar histórico** remove todos os registros visuais.
+- **Baixar novamente** cria uma nova tentativa com os mesmos dados.
+
+Nenhuma dessas ações remove arquivos de `Vídeos`. Limpar dados do navegador ou usar outro perfil também apaga apenas o histórico, nunca os vídeos.
+
+### Validação do arquivo
+
+Após o `yt-dlp` terminar, a aplicação executa duas verificações:
+
+1. `ffprobe` confirma que o MP4 possui faixas de vídeo e áudio legíveis e não está vazio.
+2. O `yt-dlp` consulta novamente a seleção de formato do YouTube e compara a duração e a resolução esperadas com o arquivo local.
+
+Um resultado **validado** indica que essas características conferem. Um aviso não apaga o arquivo: use **Baixar novamente** para fazer uma nova tentativa. Essa checagem não é uma comparação criptográfica byte a byte, pois o YouTube entrega áudio e vídeo separados e o arquivo final é mesclado localmente.
+
+## Operação diária e diagnóstico
+
+Depois do primeiro uso, para apenas iniciar os containers:
 
 ```powershell
 docker compose up -d
 ```
 
+Para reconfigurar o endereço local, o certificado ou o atalho **Mostrar arquivo**, execute novamente `start.ps1`.
+
+Comandos úteis:
+
 ```powershell
+docker compose ps
 docker compose logs -f
 docker compose down
 ```
 
+Se `youtube.download` não abrir, confirme que o Docker Desktop está em execução e rode `start.ps1`. Se as portas 80 ou 443 já estiverem ocupadas, pare o serviço que as utiliza antes de iniciar a aplicação.
+
 ## Desenvolvimento local
 
-Pré-requisitos: Node.js 20+, `yt-dlp` e `ffmpeg` disponíveis no `PATH`.
+Para desenvolver sem Docker, instale Node.js 20 ou superior, Python 3, `yt-dlp`, FFmpeg e Deno 2 ou superior no `PATH`. O Deno é usado pelo `yt-dlp` para lidar com os desafios JavaScript atuais do YouTube.
 
 ```powershell
 npm install
@@ -72,11 +110,26 @@ Em outro terminal:
 npm run dev:frontend
 ```
 
-O Vite encaminha `/api` para `http://localhost:3000`.
+O Vite encaminha `/api` para `http://localhost:3000`. Para desenvolvimento fora do Docker, defina `DOWNLOAD_ROOT` e `HOST_DOWNLOAD_ROOT` para uma pasta local gravável antes de iniciar o backend.
 
-## API
+Verificações do projeto:
 
-`POST /api/download`, com `Content-Type: application/json`:
+```powershell
+npm test
+npm run lint
+npm run build
+```
+
+## API local
+
+| Método e rota | Finalidade |
+| --- | --- |
+| `GET /api/health` | Estado do backend. |
+| `GET /api/config` | Caminho de `Vídeos` exposto à interface. |
+| `GET /api/metadata?url=...` | Consulta o título de uma URL válida do YouTube. |
+| `POST /api/download` | Inicia um download e mantém uma resposta SSE aberta. |
+
+Exemplo de `POST /api/download`:
 
 ```json
 {
@@ -86,22 +139,12 @@ O Vite encaminha `/api` para `http://localhost:3000`.
 }
 ```
 
-A resposta permanece aberta como `text/event-stream`, emitindo eventos
-`started`, `progress`, `complete` ou `error`. Somente URLs HTTPS do YouTube são
-aceitas. `outputPath` é opcional e pode ser uma subpasta ou um caminho absoluto
-dentro de `C:\\Users\\<seu-usuário>\\Videos`; `filename` também é opcional e é
-sanitizado antes de chegar ao `yt-dlp`.
+`outputPath` é opcional e pode ser uma subpasta ou um caminho absoluto dentro de `C:\\Users\\<usuário>\\Videos`. `filename` também é opcional e é sanitizado antes de chegar ao `yt-dlp`.
+
+A resposta usa `text/event-stream` e pode emitir `started`, `progress`, `verifying`, `complete` ou `error`.
 
 ## Observações do navegador
 
-- O tema e a última pasta usada ficam somente em `localStorage`.
-- O botão **Procurar** usa o seletor nativo de diretórios do navegador, não um
-  campo de upload. Como o navegador não expõe o caminho absoluto selecionado,
-  ele usa o nome da pasta como subpasta de `Vídeos`.
-- O título é consultado no `yt-dlp` e sugerido como nome do arquivo; ele pode
-  ser alterado antes de iniciar o download.
-- Caminhos exibidos usam a convenção do Windows (`\\`), inclusive quando o
-  Docker receber a variável de ambiente com `/`.
-- A leitura automática da área de transferência depende da permissão do
-  navegador e de um contexto considerado seguro. Colar manualmente sempre
-  funciona.
+- Tema, último destino e histórico ficam somente no `localStorage`.
+- Caminhos são exibidos com a convenção do Windows (`\\`), mesmo que o Docker receba a variável de ambiente com `/`.
+- A leitura automática da área de transferência depende da permissão do navegador e de um contexto seguro. Colar manualmente sempre funciona.

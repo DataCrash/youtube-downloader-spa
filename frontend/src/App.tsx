@@ -298,10 +298,10 @@ function App() {
         <section className="flex min-h-0 flex-col gap-3">
           <header className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="rounded-xl bg-primary p-2 text-primary-foreground"><Youtube className="h-5 w-5 sm:h-6 sm:w-6" /></div>
+              <div className="rounded-xl bg-primary p-2 text-primary-foreground"><Youtube className="h-5 w-5 sm:h-7 sm:w-7" /></div>
               <div className="min-w-0">
-                <h1 className="truncate text-lg font-bold tracking-tight sm:text-xl">YouTube Downloader</h1>
-                <p className="text-xs text-muted-foreground">Downloads em até 1080p</p>
+                <h1 className="truncate text-lg font-bold tracking-tight sm:text-2xl">YouTube Downloader</h1>
+                <p className="text-xs text-muted-foreground sm:text-sm">Downloads em até 1080p</p>
               </div>
             </div>
             <Button variant="outline" size="icon" onClick={cycleTheme} title={`Tema: ${theme}`} aria-label={`Alterar tema atual: ${theme}`}>
@@ -310,35 +310,38 @@ function App() {
           </header>
 
           <Card className="shadow-sm">
-            <CardHeader className="flex-row items-center justify-between space-y-0 p-4 pb-3">
-              <CardTitle className="text-base">Novo download</CardTitle>
-              <span className="text-xs text-muted-foreground">URL da área de transferência</span>
+            <CardHeader className="flex-row items-start justify-between space-y-0 p-4 pb-3 sm:p-6 sm:pb-4">
+              <div>
+                <CardTitle className="text-base sm:text-xl">Novo download</CardTitle>
+                <CardDescription className="mt-1 hidden sm:block">A URL é preenchida automaticamente quando o navegador permite acesso à área de transferência.</CardDescription>
+              </div>
+              <span className="pt-0.5 text-xs text-muted-foreground sm:hidden">URL da área de transferência</span>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <form className="grid grid-cols-[minmax(0,1fr)_auto] gap-2" onSubmit={startDownload}>
+            <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+              <form className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:gap-4" onSubmit={startDownload}>
                 <div className="col-span-full">
-                  <Label className="sr-only" htmlFor="url">URL do YouTube</Label>
-                  <Input className="h-9" id="url" type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="URL do YouTube" required />
+                  <Label className="sr-only sm:not-sr-only" htmlFor="url">URL do YouTube</Label>
+                  <Input className="h-9 sm:mt-2 sm:h-10" id="url" type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="URL do YouTube" required />
                 </div>
                 <div className="col-span-full">
-                  <Label className="sr-only" htmlFor="filename">Nome do arquivo</Label>
-                  <Input className="h-9" id="filename" value={filename} onChange={(event) => setFilename(event.target.value)} placeholder="Nome do arquivo (título sugerido)" />
+                  <Label className="sr-only sm:not-sr-only" htmlFor="filename">Nome do arquivo</Label>
+                  <Input className="h-9 sm:mt-2 sm:h-10" id="filename" value={filename} onChange={(event) => setFilename(event.target.value)} placeholder="Nome do arquivo (título sugerido)" />
                 </div>
                 <div>
-                  <Label className="sr-only" htmlFor="outputPath">Pasta de destino</Label>
-                  <Input className="h-9" id="outputPath" value={outputPath} onChange={(event) => setOutputPath(event.target.value)} placeholder="Pasta de destino" />
+                  <Label className="sr-only sm:not-sr-only" htmlFor="outputPath">Pasta de destino</Label>
+                  <Input className="h-9 sm:mt-2 sm:h-10" id="outputPath" value={outputPath} onChange={(event) => setOutputPath(event.target.value)} placeholder="Pasta de destino" />
                 </div>
-                <Button className="h-9 w-9 px-0" type="button" variant="outline" onClick={() => void chooseFolder()} title="Procurar pasta" aria-label="Procurar pasta">
-                  <FolderOpen className="h-4 w-4" />
+                <Button className="h-9 w-9 self-end px-0 sm:h-10 sm:w-auto sm:px-4" type="button" variant="outline" onClick={() => void chooseFolder()} title="Procurar pasta" aria-label="Procurar pasta">
+                  <FolderOpen className="h-4 w-4" /> <span className="hidden sm:inline">Procurar</span>
                 </Button>
-                {destinationHint ? <p className="col-span-full text-xs text-muted-foreground">{destinationHint}</p> : null}
-                <Button type="submit" className="col-span-full h-9">Iniciar download</Button>
+                {destinationHint ? <p className="col-span-full text-xs text-muted-foreground sm:-mt-2">{destinationHint}</p> : null}
+                <Button type="submit" className="col-span-full h-9 sm:h-10">Iniciar download</Button>
               </form>
             </CardContent>
           </Card>
         </section>
 
-        <section className="min-h-0" aria-live="polite">
+        <section className="h-full min-h-0" aria-live="polite">
           <Card className="flex h-full min-h-0 flex-col">
             <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 p-4 pb-3">
               <div>

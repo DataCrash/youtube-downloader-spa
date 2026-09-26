@@ -30,6 +30,14 @@ cria subpastas inexistentes ao iniciar o download. Caminhos absolutos são
 aceitos somente dentro da pasta `Vídeos`; isso impede que o container grave em
 outras áreas do computador.
 
+Ao concluir um download, use **Mostrar arquivo** para abrir o Explorador de
+Arquivos com o vídeo já selecionado. O `start.ps1` registra esse atalho local
+na primeira execução e só permite arquivos dentro de `Vídeos`.
+
+Os vídeos priorizam 1080p com H.264 e áudio AAC em MP4, formato reproduzido
+diretamente pelo Windows. Quando esse par não existe, o aplicativo escolhe a
+melhor opção disponível até 1080p, sempre com áudio.
+
 ## Operação diária
 
 Depois do primeiro uso, para iniciar novamente:
@@ -86,6 +94,8 @@ sanitizado antes de chegar ao `yt-dlp`.
   ele usa o nome da pasta como subpasta de `Vídeos`.
 - O título é consultado no `yt-dlp` e sugerido como nome do arquivo; ele pode
   ser alterado antes de iniciar o download.
+- Caminhos exibidos usam a convenção do Windows (`\\`), inclusive quando o
+  Docker receber a variável de ambiente com `/`.
 - A leitura automática da área de transferência depende da permissão do
   navegador e de um contexto considerado seguro. Colar manualmente sempre
   funciona.

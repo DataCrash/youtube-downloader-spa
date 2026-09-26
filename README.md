@@ -10,7 +10,7 @@ Aplicação local para baixar vídeos autorizados do YouTube em até 1080p. A in
 - Prioridade para 1080p em H.264 + AAC dentro de MP4, formato compatível com o Windows; quando indisponível, usa a melhor alternativa com áudio até 1080p.
 - Sugestão automática do título como nome do arquivo.
 - Criação automática de subpastas em `C:\\Users\\<usuário>\\Videos`.
-- Histórico persistente no navegador, com remoção visual, limpeza e repetição de download sem apagar arquivos existentes.
+- Histórico persistente integrado aos cards de download, com remoção visual, limpeza e repetição sem apagar arquivos existentes.
 - Atalho **Mostrar arquivo**, que abre o Explorador de Arquivos com o vídeo selecionado.
 - Verificação automática de áudio, vídeo, duração e resolução depois do download.
 - Acesso local por `https://youtube.download`, com redirecionamento de HTTP para HTTPS.
@@ -58,7 +58,7 @@ Por segurança, o aplicativo aceita destinos somente dentro de `C:\\Users\\<usu�
 
 ### Histórico
 
-O histórico é salvo no `localStorage` do navegador para o endereço `youtube.download`. Ele registra downloads concluídos e preserva a URL, o nome, o destino, o caminho do arquivo e o resultado da validação.
+O histórico é salvo no `localStorage` do navegador para o endereço `youtube.download`. Ao concluir, o card permanece no mesmo painel de downloads com suas ações de histórico. O painel mantém **Limpar histórico** visível o tempo todo e só o habilita quando há registros concluídos.
 
 - **Remover do histórico** remove somente o registro visual.
 - **Limpar histórico** remove todos os registros visuais.

@@ -106,7 +106,7 @@ function App() {
   const [videosPath, setVideosPath] = useState('')
   const [destinationHint, setDestinationHint] = useState('')
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem(themeKey) as Theme | null) || 'system')
-  const [progressEngine, setProgressEngine] = useState<ProgressEngine>(() => (localStorage.getItem(progressEngineKey) as ProgressEngine | null) || 'standard')
+  const [progressEngine, setProgressEngine] = useState<ProgressEngine>(() => (localStorage.getItem(progressEngineKey) as ProgressEngine | null) || 'cyberpunk')
   const [downloads, setDownloads] = useState<DownloadTask[]>([])
   const [history, setHistory] = useState<DownloadTask[]>(loadHistory)
   const lastClipboardRef = useRef('')

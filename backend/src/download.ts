@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 
 import {
@@ -12,11 +12,26 @@ import {
 export type DownloadEvent =
   | { type: 'started'; message: string }
   | { type: 'progress'; percent: number; speed?: string; eta?: string }
-  | { type: 'complete'; filename?: string; filePath?: string; message: string }
+  | { type: 'verifying'; message: string }
+  | { type: 'complete'; filename?: string; filePath?: string; verification?: DownloadVerification; message: string }
   | { type: 'error'; message: string }
+
+export type DownloadVerification = {
+  status: 'verified' | 'warning'
+  message: string
+}
 
 const progressPrefix = '__YTDLP_PROGRESS__|'
 const filePrefix = '__YTDLP_FILE__|'
+
+const preferredFormat = [
+  'bestvideo[height=1080][vcodec^=avc1][protocol=https]+bestaudio[acodec^=mp4a][protocol=https]',
+  'bestvideo[height=1080]+bestaudio[acodec^=mp4a]',
+  'bestvideo[height<=1080][vcodec^=avc1][protocol=https]+bestaudio[acodec^=mp4a][protocol=https]',
+  'bestvideo[height<=1080][vcodec^=avc1]+bestaudio[acodec^=mp4a]',
+  'bestvideo[height<=1080]+bestaudio[acodec^=mp4a]',
+  'best[height<=1080]',
+].join('/')
 
 export function parseYtDlpLine(line: string): DownloadEvent | undefined {
   if (line.startsWith(progressPrefix)) {
@@ -42,6 +57,66 @@ export function resolveHostFilePath(containerPath: string | undefined, downloadR
   if (!relativePath || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) return undefined
 
   return path.win32.join(hostDownloadRoot.replaceAll('/', '\\'), ...relativePath.split(path.sep))
+}
+
+function run(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { shell: false, windowsHide: true })
+    let stdout = ''
+    let stderr = ''
+    child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf8') })
+    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
+    child.once('error', reject)
+    child.once('close', (code) => {
+      if (code === 0) resolve({ stdout, stderr })
+      else reject(new Error(stderr.trim() || `${command} terminou com código ${code ?? 'desconhecido'}.`))
+    })
+  })
+}
+
+export async function verifyDownloadedFile(url: URL, filePath: string | undefined): Promise<DownloadVerification> {
+  if (!filePath) return { status: 'warning', message: 'Download concluído, mas o caminho do arquivo não pôde ser verificado.' }
+
+  try {
+    const file = await stat(filePath)
+    if (file.size === 0) return { status: 'warning', message: 'O arquivo concluído está vazio.' }
+
+    const local = await run('ffprobe', [
+      '-v', 'error',
+      '-show_entries', 'format=duration:stream=codec_type,width,height',
+      '-of', 'json',
+      filePath,
+    ])
+    const localInfo = JSON.parse(local.stdout) as {
+      format?: { duration?: string }
+      streams?: Array<{ codec_type?: string; width?: number; height?: number }>
+    }
+    const video = localInfo.streams?.find((stream) => stream.codec_type === 'video')
+    const audio = localInfo.streams?.find((stream) => stream.codec_type === 'audio')
+    if (!video || !audio) return { status: 'warning', message: 'O arquivo foi criado, mas não contém vídeo e áudio válidos.' }
+
+    const remote = await run('yt-dlp', [
+      '--no-playlist',
+      '--js-runtimes', 'deno:/usr/local/bin/deno',
+      '--remote-components', 'ejs:github',
+      '--simulate',
+      '--format', preferredFormat,
+      '--print', '%(duration)s|%(width)s|%(height)s',
+      url.toString(),
+    ])
+    const [expectedDuration = '', expectedWidth = '', expectedHeight = ''] = remote.stdout.trim().split('|')
+    const localDuration = Number(localInfo.format?.duration)
+    const durationMatches = Number.isFinite(localDuration) && Number.isFinite(Number(expectedDuration))
+      && Math.abs(localDuration - Number(expectedDuration)) <= 3
+    const resolutionMatches = Number(expectedWidth) === video.width && Number(expectedHeight) === video.height
+
+    if (!durationMatches || !resolutionMatches) {
+      return { status: 'warning', message: 'O arquivo abre com áudio e vídeo, mas a duração ou resolução não conferiu com o YouTube. Tente baixar novamente.' }
+    }
+    return { status: 'verified', message: 'Arquivo validado: áudio, vídeo, duração e resolução conferem com o YouTube.' }
+  } catch {
+    return { status: 'warning', message: 'Download concluído, mas não foi possível validar o arquivo agora. Você pode baixá-lo novamente.' }
+  }
 }
 
 export async function getVideoTitle(value: string): Promise<string> {
@@ -80,15 +155,6 @@ export async function runDownload(
   const outputTemplate = filename
     ? `${filename}.%(ext)s`
     : '%(title).100B [%(id)s].%(ext)s'
-  const preferredFormat = [
-    'bestvideo[height=1080][vcodec^=avc1][protocol=https]+bestaudio[acodec^=mp4a][protocol=https]',
-    'bestvideo[height=1080]+bestaudio[acodec^=mp4a]',
-    'bestvideo[height<=1080][vcodec^=avc1][protocol=https]+bestaudio[acodec^=mp4a][protocol=https]',
-    'bestvideo[height<=1080][vcodec^=avc1]+bestaudio[acodec^=mp4a]',
-    'bestvideo[height<=1080]+bestaudio[acodec^=mp4a]',
-    'best[height<=1080]',
-  ].join('/')
-
   const args = [
     '--no-playlist',
     '--js-runtimes',
@@ -145,16 +211,19 @@ export async function runDownload(
       stderrTail = `${stderrTail}${chunk.toString('utf8')}`.slice(-2000)
     })
     child.once('error', reject)
-    child.once('close', (code) => {
+    child.once('close', async (code) => {
       if (code === 0) {
         if (stdoutBuffer.trim()) {
           const event = parseYtDlpLine(stdoutBuffer.trim())
           if (event?.type === 'complete') completedFilename = event.filename
         }
+        emit({ type: 'verifying', message: 'Verificando áudio, vídeo e consistência com o YouTube…' })
+        const verification = await verifyDownloadedFile(url, completedFilename)
         emit({
           type: 'complete',
           filename: completedFilename,
           filePath: resolveHostFilePath(completedFilename, downloadRoot, hostDownloadRoot),
+          verification,
           message: 'Download concluído.',
         })
         resolve()

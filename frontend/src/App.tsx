@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { CheckCircle2, ExternalLink, FolderOpen, LoaderCircle, Monitor, Moon, RotateCcw, ShieldAlert, ShieldCheck, Sun, Trash2, Youtube } from 'lucide-react'
+import { CheckCircle2, ExternalLink, FileCheck2, FolderOpen, History, LoaderCircle, Monitor, Moon, RotateCcw, ShieldAlert, ShieldCheck, Sparkles, Sun, Trash2, Youtube, Zap } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 
 type Theme = 'light' | 'dark' | 'system'
+type ProgressEngine = 'standard' | 'cyberpunk'
 type DownloadStatus = 'queued' | 'downloading' | 'complete' | 'error'
 
 type DownloadTask = {
@@ -45,6 +46,7 @@ type DirectoryPickerWindow = Window & {
 const themeKey = 'youtube-downloader-theme'
 const downloadPathKey = 'youtube-downloader-last-path'
 const historyKey = 'youtube-downloader-history'
+const progressEngineKey = 'chrono-stream:ui-engine'
 
 function normalizeWindowsPath(value: string) {
   return value.replaceAll('/', '\\').replace(/\\+$/, '')
@@ -104,9 +106,11 @@ function App() {
   const [videosPath, setVideosPath] = useState('')
   const [destinationHint, setDestinationHint] = useState('')
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem(themeKey) as Theme | null) || 'system')
+  const [progressEngine, setProgressEngine] = useState<ProgressEngine>(() => (localStorage.getItem(progressEngineKey) as ProgressEngine | null) || 'cyberpunk')
   const [downloads, setDownloads] = useState<DownloadTask[]>([])
   const [history, setHistory] = useState<DownloadTask[]>(loadHistory)
   const lastClipboardRef = useRef('')
+  const sceneRef = useRef<HTMLElement>(null)
 
   const hasActiveDownloads = downloads.some((item) => item.status === 'queued' || item.status === 'downloading')
   const downloadCards = [...downloads, ...history]
@@ -127,6 +131,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(historyKey, JSON.stringify(history))
   }, [history])
+
+  useEffect(() => {
+    localStorage.setItem(progressEngineKey, progressEngine)
+  }, [progressEngine])
 
   useEffect(() => {
     void fetch('/api/config')
@@ -291,119 +299,86 @@ function App() {
 
   const cycleTheme = () => setTheme((current) => (current === 'system' ? 'light' : current === 'light' ? 'dark' : 'system'))
   const ThemeIcon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor
+  const isCyberpunk = progressEngine === 'cyberpunk'
+  const updateParallax = (clientX: number, clientY: number) => {
+    const scene = sceneRef.current
+    if (!scene) return
+    const bounds = scene.getBoundingClientRect()
+    const x = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width))
+    const y = Math.max(0, Math.min(1, (clientY - bounds.top) / bounds.height))
+    const horizontal = (x - .5) * 46
+    const vertical = (y - .5) * 32
+    scene.style.setProperty('--parallax-x', `${horizontal * .42}px`)
+    scene.style.setProperty('--parallax-y', `${vertical * .42}px`)
+    scene.style.setProperty('--scene-x', `${horizontal}px`)
+    scene.style.setProperty('--scene-y', `${vertical}px`)
+    scene.style.setProperty('--refraction-x', `${horizontal * -.58}px`)
+    scene.style.setProperty('--refraction-y', `${vertical * -.58}px`)
+    scene.style.setProperty('--glare-x', `${x * 100}%`)
+    scene.style.setProperty('--glare-y', `${y * 100}%`)
+  }
+
+  const resetParallax = () => {
+    const scene = sceneRef.current
+    if (!scene) return
+    for (const property of ['--parallax-x', '--parallax-y', '--scene-x', '--scene-y', '--refraction-x', '--refraction-y']) scene.style.setProperty(property, '0px')
+    scene.style.setProperty('--glare-x', '50%')
+    scene.style.setProperty('--glare-y', '50%')
+  }
 
   return (
-    <main className="h-dvh overflow-hidden bg-[radial-gradient(circle_at_top,_var(--accent),_transparent_38%)] p-3 sm:p-4">
-      <div className="mx-auto grid h-full max-w-6xl grid-rows-[auto_minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(17rem,0.65fr)_minmax(0,1.35fr)] lg:grid-rows-1 lg:gap-4">
-        <section className="flex min-h-0 flex-col gap-3">
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="rounded-xl bg-primary p-2 text-primary-foreground"><Youtube className="h-5 w-5 sm:h-7 sm:w-7" /></div>
-              <div className="min-w-0">
-                <h1 className="truncate text-lg font-bold tracking-tight sm:text-2xl">YouTube Downloader</h1>
-                <p className="text-xs text-muted-foreground sm:text-sm">Downloads em até 1080p</p>
-              </div>
-            </div>
-            <Button variant="outline" size="icon" onClick={cycleTheme} title={`Tema: ${theme}`} aria-label={`Alterar tema atual: ${theme}`}>
-              <ThemeIcon className="h-4 w-4" />
-            </Button>
-          </header>
+    <main ref={sceneRef} onPointerMove={(event) => updateParallax(event.clientX, event.clientY)} onPointerLeave={resetParallax} className="chrono-shell h-dvh overflow-hidden p-3 sm:p-5">
+      <div className="ambient-scene" aria-hidden="true"><i className="crystal crystal-a" /><i className="crystal crystal-b" /><i className="crystal crystal-c" /><i className="aurora aurora-a" /><i className="aurora aurora-b" /></div>
+      <div className="scene-image" aria-hidden="true" />
+      <svg className="hidden" aria-hidden="true"><defs><filter id="liquid-magnetic-goo"><feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" /><feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" /><feBlend in="SourceGraphic" in2="goo" /></filter></defs></svg>
+      <div className="mx-auto grid h-full max-w-7xl grid-rows-[auto_minmax(0,1fr)] gap-3 sm:gap-4">
+        <header className="app-topbar relative z-20 flex flex-wrap items-center justify-between gap-3 px-1 py-2 sm:px-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="brand-mark"><Youtube className="h-5 w-5" /></div>
+            <div className="min-w-0"><h1 className="truncate text-lg font-bold tracking-tight sm:text-xl">YouTube Downloader</h1><p className="text-xs text-muted-foreground">Chrono-Stream <span className="mx-1 text-cyan-500">·</span> até 1080p</p></div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="engine-toggle" title="Alternar motor de progresso"><Zap className="h-3.5 w-3.5" /><span className="hidden sm:inline">Fluido</span><button type="button" role="switch" aria-label="Ativar progresso fluido" aria-checked={isCyberpunk} onClick={() => setProgressEngine((current) => current === 'standard' ? 'cyberpunk' : 'standard')} className={`engine-switch ${isCyberpunk ? 'is-active' : ''}`}><span /></button></div>
+            <Button variant="outline" size="icon" onClick={cycleTheme} title={`Tema: ${theme}`} aria-label={`Alterar tema atual: ${theme}`}><ThemeIcon className="h-4 w-4" /></Button>
+            <Button variant="outline" size="sm" disabled={history.length === 0} onClick={() => setHistory([])} className="hidden sm:inline-flex"><Trash2 className="h-4 w-4" /> Limpar histórico</Button>
+          </div>
+        </header>
 
-          <Card className="shadow-sm">
-            <CardHeader className="flex-row items-start justify-between space-y-0 p-4 pb-3 sm:p-6 sm:pb-4">
-              <div>
-                <CardTitle className="text-base sm:text-xl">Novo download</CardTitle>
-                <CardDescription className="mt-1 hidden sm:block">A URL é preenchida automaticamente quando o navegador permite acesso à área de transferência.</CardDescription>
-              </div>
-              <span className="pt-0.5 text-xs text-muted-foreground sm:hidden">URL da área de transferência</span>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
-              <form className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:gap-4" onSubmit={startDownload}>
-                <div className="col-span-full">
-                  <Label className="sr-only sm:not-sr-only" htmlFor="url">URL do YouTube</Label>
-                  <Input className="h-9 sm:mt-2 sm:h-10" id="url" type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="URL do YouTube" required />
-                </div>
-                <div className="col-span-full">
-                  <Label className="sr-only sm:not-sr-only" htmlFor="filename">Nome do arquivo</Label>
-                  <Input className="h-9 sm:mt-2 sm:h-10" id="filename" value={filename} onChange={(event) => setFilename(event.target.value)} placeholder="Nome do arquivo (título sugerido)" />
-                </div>
-                <div>
-                  <Label className="sr-only sm:not-sr-only" htmlFor="outputPath">Pasta de destino</Label>
-                  <Input className="h-9 sm:mt-2 sm:h-10" id="outputPath" value={outputPath} onChange={(event) => setOutputPath(event.target.value)} placeholder="Pasta de destino" />
-                </div>
-                <Button className="h-9 w-9 self-end px-0 sm:h-10 sm:w-auto sm:px-4" type="button" variant="outline" onClick={() => void chooseFolder()} title="Procurar pasta" aria-label="Procurar pasta">
-                  <FolderOpen className="h-4 w-4" /> <span className="hidden sm:inline">Procurar</span>
-                </Button>
-                {destinationHint ? <p className="col-span-full text-xs text-muted-foreground sm:-mt-2">{destinationHint}</p> : null}
-                <Button type="submit" className="col-span-full h-9 sm:h-10">Iniciar download</Button>
-              </form>
-            </CardContent>
-          </Card>
-        </section>
+        <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(20rem,23rem)_minmax(0,1fr)] lg:gap-4">
+          <section className="min-h-0 lg:h-full">
+            <Card className="glass-panel sidebar-prism flex h-full min-h-0 flex-col overflow-hidden">
+              <CardHeader className="p-4 pb-3 sm:p-5 sm:pb-4"><div className="flex items-start justify-between gap-3"><div><p className="eyebrow">Novo processo</p><CardTitle className="mt-1 text-lg">Configurar download</CardTitle><CardDescription className="mt-1">Cole a URL; o título é sugerido automaticamente.</CardDescription></div><Sparkles className="mt-1 h-5 w-5 text-cyan-500" /></div></CardHeader>
+              <CardContent className="min-h-0 flex-1 overflow-y-auto p-4 pt-0 sm:p-5 sm:pt-0">
+                <form className="grid gap-4" onSubmit={startDownload}>
+                  <div className="grid gap-1.5"><Label htmlFor="url">URL do YouTube</Label><Input className="chrono-input h-11" id="url" type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Cole o link do vídeo" required /></div>
+                  <div className="grid gap-1.5"><Label htmlFor="filename">Nome do arquivo <span className="font-normal text-muted-foreground">(opcional)</span></Label><Input className="chrono-input h-11" id="filename" value={filename} onChange={(event) => setFilename(event.target.value)} placeholder="Título do vídeo" /></div>
+                  <div className="preview-well"><div className="prism-stage" aria-hidden="true"><i /><i /><i /><span><FileCheck2 className="h-5 w-5" /></span></div><div><p className="text-sm font-semibold">Pronto para processar</p><p className="mt-0.5 text-xs text-muted-foreground">Vídeo, áudio e arquivo final serão verificados.</p></div></div>
+                  <div className="grid gap-1.5"><Label htmlFor="outputPath">Pasta de destino</Label><div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2"><Input className="chrono-input h-11" id="outputPath" value={outputPath} onChange={(event) => setOutputPath(event.target.value)} placeholder="Pasta dentro de Vídeos" /><Button className="h-11 px-3" type="button" variant="outline" onClick={() => void chooseFolder()} title="Procurar pasta" aria-label="Procurar pasta"><FolderOpen className="h-4 w-4" /><span className="hidden min-[380px]:inline">Pasta</span></Button></div>{destinationHint ? <p className="text-xs text-muted-foreground">{destinationHint}</p> : <p className="text-xs text-muted-foreground">A pasta será criada dentro de Vídeos quando necessário.</p>}</div>
+                  <Button type="submit" className="chrono-primary h-11"><Youtube className="h-4 w-4" /> Iniciar download</Button>
+                </form>
+              </CardContent>
+            </Card>
+          </section>
 
-        <section className="h-full min-h-0" aria-live="polite">
-          <Card className="flex h-full min-h-0 flex-col">
-            <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 p-4 pb-3">
-              <div>
-                <CardTitle>Downloads e histórico</CardTitle>
-                <CardDescription>Remover itens não apaga os arquivos salvos.</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" disabled={history.length === 0} onClick={() => setHistory([])}>
-                <Trash2 className="h-4 w-4" /> Limpar histórico
-              </Button>
-            </CardHeader>
-            <CardContent className="min-h-0 flex-1 overflow-y-auto p-4 pt-0 pr-2">
-              <div className="grid gap-3">
-                {downloadCards.length === 0 ? (
-                  <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">Os downloads e o histórico aparecerão aqui.</div>
-                ) : downloadCards.map((item) => (
-                  <div key={item.id} className="grid gap-2 rounded-lg border p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{item.filename || 'Nome automático do YouTube'}</p>
-                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-                          <a className="inline-flex items-center gap-1 text-primary hover:underline" href={item.url} target="_blank" rel="noreferrer">
-                            Abrir no YouTube <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
-                          {item.status === 'complete' && item.filePath ? (
-                            <a className="inline-flex items-center gap-1 text-primary hover:underline" href={revealFileUrl(item.filePath)}>
-                              Mostrar arquivo <FolderOpen className="h-3.5 w-3.5" />
-                            </a>
-                          ) : null}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2 text-sm">
-                        {item.status === 'complete' ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : item.status === 'error' ? null : <LoaderCircle className="h-4 w-4 animate-spin text-primary" />}
-                        <span>{item.status === 'complete' ? 'Concluído' : item.status === 'error' ? 'Erro' : item.status === 'queued' ? 'Na fila' : 'Baixando'}</span>
-                      </div>
-                    </div>
-                    <Progress value={item.progress} />
-                    <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-                      <span>{item.error || item.message}</span>
-                      <span>{item.progress.toFixed(1)}%{item.speed ? ` · ${item.speed}` : ''}{item.eta ? ` · ETA ${item.eta}` : ''}</span>
-                    </div>
-                    {item.verification ? (
-                      <p className={`flex items-center gap-2 text-xs ${item.verification.status === 'verified' ? 'text-green-600' : 'text-amber-600'}`}>
-                        {item.verification.status === 'verified' ? <ShieldCheck className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
-                        {item.verification.message}
-                      </p>
-                    ) : null}
-                    {item.status === 'complete' ? (
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        <Button variant="outline" size="sm" onClick={() => retryDownload(item)}>
-                          <RotateCcw className="h-4 w-4" /> Baixar novamente
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setHistory((current) => current.filter((entry) => entry.id !== item.id))}>
-                          <Trash2 className="h-4 w-4" /> Remover do histórico
-                        </Button>
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </section>
+          <section className="min-h-0" aria-live="polite">
+            <Card className="glass-panel flex h-full min-h-0 flex-col overflow-hidden">
+              <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 p-4 pb-3 sm:p-5 sm:pb-4"><div><p className="eyebrow">Monitoramento</p><CardTitle className="mt-1 flex items-center gap-2 text-lg"><History className="h-4 w-4 text-cyan-500" /> Downloads e histórico</CardTitle><CardDescription className="mt-1">Remover itens não apaga os arquivos salvos.</CardDescription></div><Button variant="outline" size="icon" disabled={history.length === 0} onClick={() => setHistory([])} className="sm:hidden" title="Limpar histórico" aria-label="Limpar histórico"><Trash2 className="h-4 w-4" /></Button></CardHeader>
+              <CardContent className={`monitoring-feed min-h-0 flex-1 overflow-y-auto p-4 pt-0 sm:p-5 sm:pt-0 ${isCyberpunk ? 'mode-cyberpunk-fluid' : ''}`}>
+                <div className="grid gap-3">
+                  {downloadCards.length === 0 ? <div className="empty-feed"><div className="empty-orb"><Youtube className="h-5 w-5" /></div><p className="font-medium">Aguardando o primeiro vídeo</p><p className="text-xs text-muted-foreground">O progresso e o histórico aparecerão nesta área.</p></div> : downloadCards.map((item) => (
+                    <article key={item.id} className="download-card"><i className="card-prism-orb" aria-hidden="true" />
+                      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold">{item.filename || 'Nome automático do YouTube'}</p><div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs"><a className="inline-flex items-center gap-1 text-cyan-600 hover:underline dark:text-cyan-400" href={item.url} target="_blank" rel="noreferrer">Abrir no YouTube <ExternalLink className="h-3 w-3" /></a>{item.status === 'complete' && item.filePath ? <a className="inline-flex items-center gap-1 text-cyan-600 hover:underline dark:text-cyan-400" href={revealFileUrl(item.filePath)}>Mostrar arquivo <FolderOpen className="h-3 w-3" /></a> : null}</div></div><div className="status-badge">{item.status === 'complete' ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : item.status === 'error' ? <ShieldAlert className="h-3.5 w-3.5 text-rose-500" /> : <LoaderCircle className="h-3.5 w-3.5 animate-spin text-cyan-500" />}<span>{item.status === 'complete' ? 'Concluído' : item.status === 'error' ? 'Erro' : item.status === 'queued' ? 'Na fila' : 'Baixando'}</span></div></div>
+                      {item.status !== 'complete' && item.status !== 'error' ? <div className="mt-4"><Progress value={item.progress} className="mode-standard-bar radioactive-progress" /><div className="liquid-track-container"><div className="liquid-core-stream" style={{ width: `${item.progress}%` }}><span className="liquid-particle-node" /></div></div></div> : null}
+                      <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>{item.error || item.message}</span>{isCyberpunk && item.status === 'downloading' ? <span className="font-mono text-cyan-600 dark:text-cyan-300">Fluxo ativo {item.speed ? `· ${item.speed}` : ''}</span> : <span>{item.status !== 'complete' && item.status !== 'error' ? `${item.progress.toFixed(1)}%` : ''}{item.speed ? ` · ${item.speed}` : ''}{item.eta ? ` · ETA ${item.eta}` : ''}</span>}</div>
+                      {item.verification ? <p className={`mt-3 flex items-start gap-2 border-t pt-3 text-xs ${item.verification.status === 'verified' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>{item.verification.status === 'verified' ? <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /> : <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />}{item.verification.message}</p> : null}
+                      {item.status === 'complete' ? <div className="mt-3 flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => retryDownload(item)}><RotateCcw className="h-3.5 w-3.5" /> Baixar novamente</Button><Button variant="ghost" size="sm" onClick={() => setHistory((current) => current.filter((entry) => entry.id !== item.id))}><Trash2 className="h-3.5 w-3.5" /> Remover</Button></div> : null}
+                    </article>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+        </div>
       </div>
     </main>
   )

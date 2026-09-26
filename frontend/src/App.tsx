@@ -306,14 +306,28 @@ function App() {
     const bounds = scene.getBoundingClientRect()
     const x = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width))
     const y = Math.max(0, Math.min(1, (clientY - bounds.top) / bounds.height))
-    scene.style.setProperty('--parallax-x', `${(x - .5) * 18}px`)
-    scene.style.setProperty('--parallax-y', `${(y - .5) * 14}px`)
+    const horizontal = (x - .5) * 46
+    const vertical = (y - .5) * 32
+    scene.style.setProperty('--parallax-x', `${horizontal * .42}px`)
+    scene.style.setProperty('--parallax-y', `${vertical * .42}px`)
+    scene.style.setProperty('--scene-x', `${horizontal}px`)
+    scene.style.setProperty('--scene-y', `${vertical}px`)
+    scene.style.setProperty('--refraction-x', `${horizontal * -.58}px`)
+    scene.style.setProperty('--refraction-y', `${vertical * -.58}px`)
     scene.style.setProperty('--glare-x', `${x * 100}%`)
     scene.style.setProperty('--glare-y', `${y * 100}%`)
   }
 
+  const resetParallax = () => {
+    const scene = sceneRef.current
+    if (!scene) return
+    for (const property of ['--parallax-x', '--parallax-y', '--scene-x', '--scene-y', '--refraction-x', '--refraction-y']) scene.style.setProperty(property, '0px')
+    scene.style.setProperty('--glare-x', '50%')
+    scene.style.setProperty('--glare-y', '50%')
+  }
+
   return (
-    <main ref={sceneRef} onPointerMove={(event) => updateParallax(event.clientX, event.clientY)} onPointerLeave={() => { sceneRef.current?.style.setProperty('--parallax-x', '0px'); sceneRef.current?.style.setProperty('--parallax-y', '0px') }} className="chrono-shell h-dvh overflow-hidden p-3 sm:p-5">
+    <main ref={sceneRef} onPointerMove={(event) => updateParallax(event.clientX, event.clientY)} onPointerLeave={resetParallax} className="chrono-shell h-dvh overflow-hidden p-3 sm:p-5">
       <div className="ambient-scene" aria-hidden="true"><i className="crystal crystal-a" /><i className="crystal crystal-b" /><i className="crystal crystal-c" /><i className="aurora aurora-a" /><i className="aurora aurora-b" /></div>
       <div className="scene-image" aria-hidden="true" />
       <svg className="hidden" aria-hidden="true"><defs><filter id="liquid-magnetic-goo"><feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" /><feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" /><feBlend in="SourceGraphic" in2="goo" /></filter></defs></svg>
@@ -354,7 +368,7 @@ function App() {
                   {downloadCards.length === 0 ? <div className="empty-feed"><div className="empty-orb"><Youtube className="h-5 w-5" /></div><p className="font-medium">Aguardando o primeiro vídeo</p><p className="text-xs text-muted-foreground">O progresso e o histórico aparecerão nesta área.</p></div> : downloadCards.map((item) => (
                     <article key={item.id} className="download-card"><i className="card-prism-orb" aria-hidden="true" />
                       <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold">{item.filename || 'Nome automático do YouTube'}</p><div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs"><a className="inline-flex items-center gap-1 text-cyan-600 hover:underline dark:text-cyan-400" href={item.url} target="_blank" rel="noreferrer">Abrir no YouTube <ExternalLink className="h-3 w-3" /></a>{item.status === 'complete' && item.filePath ? <a className="inline-flex items-center gap-1 text-cyan-600 hover:underline dark:text-cyan-400" href={revealFileUrl(item.filePath)}>Mostrar arquivo <FolderOpen className="h-3 w-3" /></a> : null}</div></div><div className="status-badge">{item.status === 'complete' ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : item.status === 'error' ? <ShieldAlert className="h-3.5 w-3.5 text-rose-500" /> : <LoaderCircle className="h-3.5 w-3.5 animate-spin text-cyan-500" />}<span>{item.status === 'complete' ? 'Concluído' : item.status === 'error' ? 'Erro' : item.status === 'queued' ? 'Na fila' : 'Baixando'}</span></div></div>
-                      {item.status !== 'complete' && item.status !== 'error' ? <div className="mt-4"><Progress value={item.progress} className="mode-standard-bar" /><div className="liquid-track-container"><div className="liquid-core-stream" style={{ width: `${item.progress}%` }}><span className="liquid-particle-node" /></div></div></div> : null}
+                      {item.status !== 'complete' && item.status !== 'error' ? <div className="mt-4"><Progress value={item.progress} className="mode-standard-bar radioactive-progress" /><div className="liquid-track-container"><div className="liquid-core-stream" style={{ width: `${item.progress}%` }}><span className="liquid-particle-node" /></div></div></div> : null}
                       <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>{item.error || item.message}</span>{isCyberpunk && item.status === 'downloading' ? <span className="font-mono text-cyan-600 dark:text-cyan-300">Fluxo ativo {item.speed ? `· ${item.speed}` : ''}</span> : <span>{item.status !== 'complete' && item.status !== 'error' ? `${item.progress.toFixed(1)}%` : ''}{item.speed ? ` · ${item.speed}` : ''}{item.eta ? ` · ETA ${item.eta}` : ''}</span>}</div>
                       {item.verification ? <p className={`mt-3 flex items-start gap-2 border-t pt-3 text-xs ${item.verification.status === 'verified' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>{item.verification.status === 'verified' ? <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /> : <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />}{item.verification.message}</p> : null}
                       {item.status === 'complete' ? <div className="mt-3 flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => retryDownload(item)}><RotateCcw className="h-3.5 w-3.5" /> Baixar novamente</Button><Button variant="ghost" size="sm" onClick={() => setHistory((current) => current.filter((entry) => entry.id !== item.id))}><Trash2 className="h-3.5 w-3.5" /> Remover</Button></div> : null}

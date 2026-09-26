@@ -21,6 +21,7 @@ type DownloadTask = {
   speed?: string
   eta?: string
   error?: string
+  filePath?: string
 }
 
 type ServerEvent = {
@@ -29,6 +30,7 @@ type ServerEvent = {
   percent?: number
   speed?: string
   eta?: string
+  filePath?: string
 }
 
 type AppConfig = { downloadPath: string }
@@ -39,6 +41,14 @@ type DirectoryPickerWindow = Window & {
 
 const themeKey = 'youtube-downloader-theme'
 const downloadPathKey = 'youtube-downloader-last-path'
+
+function normalizeWindowsPath(value: string) {
+  return value.replaceAll('/', '\\').replace(/\\+$/, '')
+}
+
+function revealFileUrl(filePath: string) {
+  return `youtube-downloader://reveal/${encodeURIComponent(filePath)}`
+}
 
 function applyTheme(theme: Theme) {
   const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -105,8 +115,10 @@ function App() {
         return response.json() as Promise<AppConfig>
       })
       .then((config) => {
-        setVideosPath(config.downloadPath)
-        if (!localStorage.getItem(downloadPathKey) && config.downloadPath) setOutputPath(config.downloadPath)
+        const normalizedVideosPath = normalizeWindowsPath(config.downloadPath)
+        setVideosPath(normalizedVideosPath)
+        const savedPath = localStorage.getItem(downloadPathKey)
+        setOutputPath(normalizeWindowsPath(savedPath || normalizedVideosPath))
       })
       .catch(() => setDestinationHint('Não foi possível identificar a pasta Vídeos do sistema.'))
   }, [])
@@ -200,7 +212,12 @@ function App() {
             message: 'Baixando vídeo…',
           })
         } else if (serverEvent.type === 'complete') {
-          updateTask(id, { status: 'complete', progress: 100, message: serverEvent.message || 'Download concluído.' })
+          updateTask(id, {
+            status: 'complete',
+            progress: 100,
+            filePath: serverEvent.filePath,
+            message: serverEvent.message || 'Download concluído.',
+          })
         } else {
           updateTask(id, { status: 'error', error: serverEvent.message || 'Falha no download.', message: 'Download interrompido.' })
         }
@@ -227,7 +244,7 @@ function App() {
         setDestinationHint('A pasta Vídeos ainda está sendo identificada. Tente novamente em instantes.')
         return
       }
-      setOutputPath(`${videosPath}\\${directory.name}`)
+      setOutputPath(`${normalizeWindowsPath(videosPath)}\\${directory.name}`)
       setDestinationHint('A subpasta será criada dentro de Vídeos, caso ainda não exista.')
     } catch (error) {
       if (error instanceof DOMException && error.name !== 'AbortError') {
@@ -297,6 +314,11 @@ function App() {
                     <a className="inline-flex items-center gap-1 text-sm text-primary hover:underline" href={item.url} target="_blank" rel="noreferrer">
                       Abrir no YouTube <ExternalLink className="h-3.5 w-3.5" />
                     </a>
+                    {item.status === 'complete' && item.filePath ? (
+                      <a className="ml-4 inline-flex items-center gap-1 text-sm text-primary hover:underline" href={revealFileUrl(item.filePath)}>
+                        Mostrar arquivo <FolderOpen className="h-3.5 w-3.5" />
+                      </a>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     {item.status === 'complete' ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : item.status === 'error' ? null : <LoaderCircle className="h-4 w-4 animate-spin text-primary" />}

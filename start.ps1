@@ -17,6 +17,17 @@ if (-not (Test-Administrator)) {
 
 Set-Location $PSScriptRoot
 
+$revealScript = Join-Path $PSScriptRoot 'reveal-download.ps1'
+if (-not (Test-Path -LiteralPath $revealScript)) {
+  throw 'O script para mostrar arquivos baixados não foi encontrado.'
+}
+
+$protocolKey = 'HKCU:\Software\Classes\youtube-downloader'
+New-Item -Path "$protocolKey\shell\open\command" -Force | Out-Null
+Set-Item -Path $protocolKey -Value 'URL:YouTube Downloader Protocol'
+New-ItemProperty -Path $protocolKey -Name 'URL Protocol' -Value '' -PropertyType String -Force | Out-Null
+Set-Item -Path "$protocolKey\shell\open\command" -Value ('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}" "%1"' -f $revealScript)
+
 $hostsPath = Join-Path $env:SystemRoot 'System32\drivers\etc\hosts'
 $hostsLines = Get-Content -LiteralPath $hostsPath | Where-Object { $_ -notmatch '(^|\s)youtube\.download(\s|$)' }
 $hostsLines += '127.0.0.1 youtube.download'

@@ -1,9 +1,15 @@
 FROM node:20-bookworm-slim
 
+ARG DENO_VERSION=2.6.3
+
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg python3 \
+  && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg python3 unzip \
   && curl -fL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
+  && curl -fL "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip" -o /tmp/deno.zip \
+  && unzip -q /tmp/deno.zip -d /usr/local/bin \
+  && rm /tmp/deno.zip \
   && chmod 0755 /usr/local/bin/yt-dlp \
+  && chmod 0755 /usr/local/bin/deno \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

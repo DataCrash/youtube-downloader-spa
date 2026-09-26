@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import path from 'node:path'
 import test from 'node:test'
 
-import { parseYtDlpLine } from '../src/download.js'
+import { parseYtDlpLine, resolveHostFilePath } from '../src/download.js'
 import { assertYouTubeUrl, resolveOutputDirectory, sanitizeFilename } from '../src/validation.js'
 
 test('aceita somente URLs HTTPS do YouTube', () => {
@@ -28,4 +28,12 @@ test('sanitiza nomes e interpreta progresso', () => {
     speed: '1.2MiB/s',
     eta: '00:05',
   })
+})
+
+test('converte o arquivo concluído para o caminho do Windows', () => {
+  assert.equal(
+    resolveHostFilePath('/downloads/FullCycle/aula.mp4', '/downloads', 'C:\\Users\\DataCrash/Videos'),
+    'C:\\Users\\DataCrash\\Videos\\FullCycle\\aula.mp4',
+  )
+  assert.equal(resolveHostFilePath('/tmp/aula.mp4', '/downloads', 'C:\\Users\\DataCrash\\Videos'), undefined)
 })

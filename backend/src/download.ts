@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { mkdir } from 'node:fs/promises'
+import path from 'node:path'
 
 import {
   assertYouTubeUrl,
@@ -11,7 +12,7 @@ import {
 export type DownloadEvent =
   | { type: 'started'; message: string }
   | { type: 'progress'; percent: number; speed?: string; eta?: string }
-  | { type: 'complete'; filename?: string; message: string }
+  | { type: 'complete'; filename?: string; filePath?: string; message: string }
   | { type: 'error'; message: string }
 
 const progressPrefix = '__YTDLP_PROGRESS__|'
@@ -32,6 +33,15 @@ export function parseYtDlpLine(line: string): DownloadEvent | undefined {
     return { type: 'complete', filename: line.slice(filePrefix.length).trim(), message: 'Download concluído.' }
   }
   return undefined
+}
+
+export function resolveHostFilePath(containerPath: string | undefined, downloadRoot: string, hostDownloadRoot: string): string | undefined {
+  if (!containerPath || !hostDownloadRoot) return undefined
+
+  const relativePath = path.relative(downloadRoot, containerPath)
+  if (!relativePath || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) return undefined
+
+  return path.win32.join(hostDownloadRoot.replaceAll('/', '\\'), ...relativePath.split(path.sep))
 }
 
 export async function getVideoTitle(value: string): Promise<string> {
@@ -70,14 +80,33 @@ export async function runDownload(
   const outputTemplate = filename
     ? `${filename}.%(ext)s`
     : '%(title).100B [%(id)s].%(ext)s'
+  const preferredFormat = [
+    'bestvideo[height=1080][vcodec^=avc1][protocol=https]+bestaudio[acodec^=mp4a][protocol=https]',
+    'bestvideo[height=1080]+bestaudio[acodec^=mp4a]',
+    'bestvideo[height<=1080][vcodec^=avc1][protocol=https]+bestaudio[acodec^=mp4a][protocol=https]',
+    'bestvideo[height<=1080][vcodec^=avc1]+bestaudio[acodec^=mp4a]',
+    'bestvideo[height<=1080]+bestaudio[acodec^=mp4a]',
+    'best[height<=1080]',
+  ].join('/')
 
   const args = [
     '--no-playlist',
+    '--js-runtimes',
+    'deno:/usr/local/bin/deno',
+    '--remote-components',
+    'ejs:github',
     '--newline',
     '--progress',
     '--no-colors',
     '--format',
-    'bestvideo[height<=1080]+bestaudio/best[height<=1080]',
+    preferredFormat,
+    '--concurrent-fragments',
+    '1',
+    '--retries',
+    '10',
+    '--fragment-retries',
+    '10',
+    '--abort-on-unavailable-fragment',
     '--merge-output-format',
     'mp4',
     '--paths',
@@ -122,7 +151,12 @@ export async function runDownload(
           const event = parseYtDlpLine(stdoutBuffer.trim())
           if (event?.type === 'complete') completedFilename = event.filename
         }
-        emit({ type: 'complete', filename: completedFilename, message: 'Download concluído.' })
+        emit({
+          type: 'complete',
+          filename: completedFilename,
+          filePath: resolveHostFilePath(completedFilename, downloadRoot, hostDownloadRoot),
+          message: 'Download concluído.',
+        })
         resolve()
         return
       }

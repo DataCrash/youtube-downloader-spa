@@ -90,7 +90,8 @@ button, input { font: inherit; }
 }
 
 .ambient-scene { display: none; }
-.scene-image { position: absolute; z-index: 0; inset: -30px; pointer-events: none; background: linear-gradient(90deg, color-mix(in srgb, var(--background) 24%, transparent), color-mix(in srgb, var(--background) 5%, transparent) 55%, color-mix(in srgb, var(--background) 24%, transparent)), var(--scene-image) center / cover no-repeat; transform: translate(var(--parallax-x), var(--parallax-y)) scale(1.06); transition: transform .28s cubic-bezier(.16,.8,.25,1); will-change: transform; }
+.scene-image { position: absolute; z-index: 0; inset: -30px; overflow: hidden; pointer-events: none; background: linear-gradient(90deg, color-mix(in srgb, var(--background) 24%, transparent), color-mix(in srgb, var(--background) 5%, transparent) 55%, color-mix(in srgb, var(--background) 24%, transparent)), var(--scene-image) center / cover no-repeat; transform: translate(var(--parallax-x), var(--parallax-y)) scale(1.06); transition: transform .28s cubic-bezier(.16,.8,.25,1); will-change: transform; }
+.scene-image::after { content: ''; position: absolute; inset: -32%; opacity: .34; mix-blend-mode: screen; background: radial-gradient(ellipse at 22% 32%, rgba(0,242,254,.34), transparent 10%), radial-gradient(ellipse at 74% 51%, rgba(155,81,224,.31), transparent 13%), linear-gradient(112deg, transparent 42%, rgba(255,255,255,.18) 48%, transparent 55%); filter: blur(15px); animation: crystal-caustics 11s ease-in-out infinite alternate; }
 .chrono-shell > .mx-auto { position: relative; z-index: 1; }
 .aurora { position: absolute; display: block; height: 4px; border-radius: 999px; opacity: .8; filter: blur(1px) drop-shadow(0 0 12px var(--accent-primary)); background: linear-gradient(90deg, transparent, var(--accent-primary), #fff, var(--accent-fluid-end), transparent); transform: rotate(-12deg); }
 .aurora-a { top: 33%; left: 13%; width: 76%; }.aurora-b { top: 71%; left: 32%; width: 60%; opacity: .52; transform: rotate(15deg); }
@@ -119,14 +120,15 @@ button, input { font: inherit; }
 .glass-panel:hover::after { opacity: .8; }
 
 .dark .glass-panel {
-  background: linear-gradient(112deg, rgba(8, 14, 26, .67), rgba(16, 25, 43, .38)) padding-box, linear-gradient(135deg, rgba(255,255,255,.33), rgba(0,242,254,.42) 47%, rgba(155,81,224,.35) 72%, transparent) border-box !important;
+  background: linear-gradient(112deg, rgba(3, 7, 15, .48), rgba(12, 17, 29, .28)) padding-box, linear-gradient(135deg, rgba(255,255,255,.28), rgba(0,242,254,.29) 47%, rgba(155,81,224,.27) 72%, transparent) border-box !important;
   box-shadow: 0 25px 68px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.13), inset 15px 0 38px rgba(0,242,254,.045);
 }
 
-.dark .chrono-input { background: rgba(4, 9, 19, .68) !important; border-color: rgba(148, 163, 184, .27) !important; color: #f8fafc; }
+.dark .scene-image { filter: brightness(.43) saturate(.54) contrast(1.2); }
+.dark .chrono-input { background: rgba(3, 7, 15, .54) !important; border-color: rgba(148, 163, 184, .24) !important; color: #f8fafc; }
 .dark .preview-well { background: radial-gradient(circle at 22% 50%, rgba(0,242,254,.18), transparent 36%), rgba(5, 12, 24, .53); box-shadow: inset 0 0 36px rgba(155,81,224,.13), 0 0 25px rgba(0,242,254,.04); }
-.dark .sidebar-prism::before { opacity: .46; background: conic-gradient(from 45deg, rgba(0,242,254,.56), rgba(255,255,255,.13), rgba(155,81,224,.7), rgba(225,29,72,.38), rgba(0,242,254,.56)); filter: drop-shadow(0 0 23px rgba(0,242,254,.18)); }
-.dark .download-card { background: linear-gradient(107deg, rgba(8,14,26,.68), rgba(18,29,47,.38)); border-color: rgba(148,163,184,.27); box-shadow: 0 14px 40px rgba(0,0,0,.36), inset 0 1px 0 rgba(255,255,255,.11); }
+.dark .sidebar-prism::before { opacity: .3; background: conic-gradient(from 45deg, rgba(0,242,254,.42), rgba(255,255,255,.09), rgba(155,81,224,.52), rgba(225,29,72,.28), rgba(0,242,254,.42)); filter: drop-shadow(0 0 23px rgba(0,242,254,.12)); }
+.dark .download-card { background: linear-gradient(107deg, rgba(3,7,15,.46), rgba(12,17,29,.24)); border-color: rgba(148,163,184,.23); box-shadow: 0 14px 40px rgba(0,0,0,.36), inset 0 1px 0 rgba(255,255,255,.11); }
 .dark .download-card::after { opacity: .75; }.dark .card-prism-orb { opacity: .58; }
 
 .dark .chrono-shell::after { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(90deg, rgba(2,6,14,.16), transparent 47%, rgba(2,6,14,.27)); mix-blend-mode: multiply; }
@@ -153,6 +155,9 @@ button, input { font: inherit; }
 .liquid-particle-node { position: absolute; top: 50%; right: -4px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent-fluid-end); transform: translateY(-50%); animation: magnetic-pulse 1.2s infinite alternate ease-in-out; }
 .mode-cyberpunk-fluid .mode-standard-bar { display: none; }.mode-cyberpunk-fluid .liquid-track-container { display: block; }
 @keyframes magnetic-pulse { from { scale: .72; opacity: .72; } to { scale: 1.18; opacity: 1; } }
+@keyframes crystal-caustics { 0% { transform: translate3d(-7%, -4%, 0) rotate(-9deg) scale(.92); opacity: .15; } 48% { opacity: .5; } 100% { transform: translate3d(9%, 6%, 0) rotate(13deg) scale(1.1); opacity: .22; } }
+
+@media (prefers-reduced-motion: reduce) { .scene-image, .glass-panel, .download-card, .prism-stage, .prism-stage i, .card-prism-orb { transition: none !important; animation: none !important; } .scene-image::after { animation: none; } }
 
 @media (max-width: 1023px) { .chrono-shell { overflow-y: auto; } .chrono-shell > div { min-height: 100%; height: auto; } .crystal-b { right: -2rem; } }
 @media (min-width: 1024px) and (max-height: 760px) { .sidebar-prism > div:first-child { padding: .85rem 1rem .65rem; }.sidebar-prism > div:first-child .text-muted-foreground { display: none; }.sidebar-prism > div:last-child { padding: 0 1rem 1rem; }.sidebar-prism form { gap: .6rem; }.sidebar-prism .chrono-input, .sidebar-prism button.h-11 { height: 2.35rem; }.sidebar-prism .preview-well { min-height: 4.9rem; padding: .45rem .65rem; }.sidebar-prism .prism-stage { width: 3.7rem; }.sidebar-prism .prism-stage span { width: 1.75rem; height: 1.75rem; }.sidebar-prism .preview-well p { line-height: 1.15; }.sidebar-prism .preview-well p:last-child { margin-top: .2rem; }.sidebar-prism .text-xs { font-size: .68rem; } }

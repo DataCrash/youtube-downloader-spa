@@ -83,6 +83,14 @@ Depois do primeiro uso, para apenas iniciar os containers:
 docker compose up -d
 ```
 
+O backend verifica automaticamente a atualização do `yt-dlp` no canal `nightly` ao iniciar e novamente a cada 24 horas enquanto estiver em execução. A rotina roda dentro do container, registra resultado ou falha nos logs e não impede a inicialização do aplicativo se a rede estiver indisponível. Se o container for recriado, a verificação acontece novamente na próxima inicialização. Para acompanhar:
+
+```powershell
+docker compose logs -f backend
+```
+
+Node.js, Deno, FFmpeg e as dependências da aplicação continuam controlados pela imagem e pelo lockfile; atualize esses componentes em uma alteração de build testada.
+
 Para reconfigurar o endereço local, o certificado ou o atalho **Mostrar arquivo**, execute novamente `start.ps1`.
 
 Comandos úteis:

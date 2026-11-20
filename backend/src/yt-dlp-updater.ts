@@ -24,7 +24,7 @@ export function updateYtDlp(): Promise<void> {
   console.info('[yt-dlp] Verificando atualização no canal nightly.')
 
   return new Promise((resolve, reject) => {
-    const child = spawn('yt-dlp', ['--update-to', 'nightly'], { shell: false, windowsHide: true })
+    const child = spawn('/home/node/.local/bin/yt-dlp', ['--update-to', 'nightly'], { shell: false, windowsHide: true })
     let stdout = ''
     let stderr = ''
 
